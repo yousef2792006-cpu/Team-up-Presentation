@@ -1,0 +1,3306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TeamUp – The Backend Runner</title>
+    <meta name="description" content="An interactive 2D Chrome Dinosaur-inspired endless-runner game presentation exploring the TeamUp University Platform Backend Architecture, Chen ERD, .NET 10 APIs, Concurrency, and Gamification Engine." />
+    <meta property="og:title" content="TeamUp – The Backend Runner" />
+    <meta property="og:description" content="An interactive 2D Chrome Dinosaur-inspired endless-runner game presentation exploring the TeamUp University Platform Backend Architecture, Chen ERD, .NET 10 APIs, Concurrency, and Gamification Engine." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --dino-bg: #f7f7f7;
+        --dino-surface: #ffffff;
+        --dino-ink: #535353;
+        --dino-dark: #202124;
+        --dino-muted: #757575;
+        --dino-light-border: #cfcfcf;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        background-color: var(--dino-bg);
+        color: var(--dino-dark);
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        user-select: none;
+      }
+
+      .font-pixel {
+        font-family: 'Press Start 2P', 'Courier New', monospace;
+        letter-spacing: 0.04em;
+      }
+
+      .font-code {
+        font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .pixelated {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      .retro-box {
+        background-color: #ffffff;
+        border: 3px solid #202124;
+        box-shadow: 6px 6px 0px #535353;
+      }
+
+      .retro-box-sm {
+        background-color: #ffffff;
+        border: 2px solid #202124;
+        box-shadow: 4px 4px 0px #535353;
+      }
+
+      .retro-btn {
+        background-color: #202124;
+        color: #f7f7f7;
+        border: 2px solid #202124;
+        box-shadow: 4px 4px 0px #757575;
+        cursor: pointer;
+        transition: transform 100ms ease, background-color 100ms ease, box-shadow 100ms ease;
+      }
+
+      .retro-btn:hover:not(:disabled) {
+        transform: translate(-1px, -1px);
+        box-shadow: 5px 5px 0px #535353;
+      }
+
+      .retro-btn:active:not(:disabled) {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px #535353;
+      }
+
+      .retro-btn-secondary {
+        background-color: #f7f7f7;
+        color: #202124;
+        border: 2px solid #202124;
+        box-shadow: 4px 4px 0px #535353;
+        cursor: pointer;
+        transition: transform 100ms ease, background-color 100ms ease, box-shadow 100ms ease;
+      }
+
+      .retro-btn-secondary:hover:not(:disabled) {
+        background-color: #ebebeb;
+        transform: translate(-1px, -1px);
+        box-shadow: 5px 5px 0px #202124;
+      }
+
+      .retro-btn-secondary:active:not(:disabled) {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px #202124;
+      }
+
+      /* Layout utilities */
+      .app-shell {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .hud-header {
+        z-index: 20;
+        background: #f7f7f7;
+        border-bottom: 2px solid #535353;
+        padding: 10px 20px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .hud-left, .hud-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .checkpoint-strip {
+        z-index: 20;
+        background: #ebebeb;
+        border-bottom: 1px solid #535353;
+        padding: 6px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        overflow-x: auto;
+      }
+
+      .cp-buttons-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .cp-pill {
+        padding: 3px 8px;
+        font-size: 11px;
+        border: 1px solid #cfcfcf;
+        background: #f7f7f7;
+        color: #757575;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .cp-pill.done {
+        background: #ffffff;
+        color: #202124;
+        border-color: #202124;
+        font-weight: 700;
+      }
+
+      .cp-pill.current {
+        background: #202124;
+        color: #f7f7f7;
+        border-color: #202124;
+        font-weight: 700;
+      }
+
+      .game-stage {
+        position: relative;
+        flex: 1;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      #dino-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .overlay-center {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(32, 33, 36, 0.62);
+      }
+
+      .overlay-welcome {
+        position: absolute;
+        inset: 0;
+        z-index: 15;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        pointer-events: none;
+      }
+
+      .pointer-auto {
+        pointer-events: auto;
+      }
+
+      .boss-top-overlay {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 86px;
+        z-index: 30;
+        padding: 8px 20px;
+        display: flex;
+        justify-content: center;
+        pointer-events: none;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+      }
+
+      .grid-5 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 8px 10px;
+        text-align: left;
+        border-bottom: 1px solid #cfcfcf;
+      }
+
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f0f0f0;
+        border-left: 2px solid #535353;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #535353;
+        border: 2px solid #f0f0f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" class="app-shell">
+      <!-- TOP RETRO HUD -->
+      <header class="hud-header">
+        <div class="hud-left">
+          <button id="btn-brand-home" class="font-pixel" style="font-size:13px;background:none;border:none;color:#202124;cursor:pointer;padding:0;" title="Return to Main Menu">
+            TEAMUP · BACKEND RUNNER
+          </button>
+          <div class="font-code" style="font-size:12px;color:#535353;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span>·</span>
+            <strong id="hud-level-text" style="color:#202124;">LEVEL: 1/12 (LVL-01)</strong>
+            <span>·</span>
+            <span id="hud-cp-count">CHECKPOINTS: 0/12</span>
+            <span>·</span>
+            <strong id="hud-lives" style="color:#202124;">LIVES: ♥♥♥♥♥</strong>
+          </div>
+        </div>
+
+        <div class="hud-right">
+          <button id="btn-hud-pause" class="font-pixel hidden" style="font-size:10px;padding:6px 12px;border:2px solid #202124;background:#ffffff;color:#202124;cursor:pointer;">
+            ⏸ PAUSE
+          </button>
+          <button id="btn-hud-open-slide" class="retro-btn-secondary font-code hidden" style="font-size:12px;padding:5px 10px;font-weight:700;">
+            Open LVL-01 Panel
+          </button>
+          <button id="btn-sfx-toggle" class="font-code" style="font-size:12px;padding:5px 10px;border:2px solid #202124;background:#ffffff;font-weight:700;cursor:pointer;">
+            SFX: ON
+          </button>
+          <button id="btn-bgm-toggle" class="font-code" style="font-size:12px;padding:5px 10px;border:2px solid #202124;background:#ffffff;font-weight:700;cursor:pointer;">
+            BGM: ON
+          </button>
+          <label class="font-code" style="font-size:12px;color:#535353;display:flex;align-items:center;gap:6px;">
+            <span>VOL</span>
+            <input id="input-volume" type="range" min="0" max="1" step="0.05" value="0.55" style="width:65px;accent-color:#202124;cursor:pointer;" />
+          </label>
+          <button id="btn-motion-toggle" class="font-code" style="font-size:12px;padding:5px 10px;border:2px solid #535353;background:#ffffff;cursor:pointer;">
+            MOTION: FULL
+          </button>
+          <div class="font-pixel" style="font-size:13px;color:#535353;white-space:nowrap;">
+            HI <span id="hud-hi-score">01250</span> <span id="hud-score" style="color:#202124;">00000</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- CHECKPOINT PROGRESS STRIP -->
+      <div class="checkpoint-strip">
+        <div id="cp-strip-container" class="cp-buttons-row font-code"></div>
+        <button id="btn-boss-strip" class="font-pixel" disabled style="font-size:10px;padding:4px 10px;border:1px solid #cfcfcf;background:#e0e0e0;color:#757575;cursor:not-allowed;white-space:nowrap;">
+          🔒 BOSS (0/12)
+        </button>
+      </div>
+
+      <!-- MAIN 2D GAMEPLAY STAGE -->
+      <main class="game-stage">
+        <canvas id="dino-canvas" class="pixelated"></canvas>
+
+        <!-- PROMINENT ON-CANVAS PAUSE BUTTON WHILE RUNNING -->
+        <div id="canvas-pause-wrapper" class="hidden" style="position:absolute;top:16px;left:24px;z-index:20;">
+          <button id="btn-canvas-pause" class="retro-btn font-pixel" style="font-size:11px;padding:9px 16px;">
+            ⏸ PAUSE MENU
+          </button>
+        </div>
+
+        <!-- BOTTOM RUNNING CONTROL BAR -->
+        <div id="running-footer-hint" class="hidden font-code" style="pointer-events:none;position:absolute;bottom:14px;left:24px;right:24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:#535353;">
+          <div style="background:rgba(247,247,247,0.92);border:2px solid #535353;padding:6px 12px;display:flex;align-items:center;gap:10px;">
+            <span class="font-pixel" style="font-size:10px;color:#202124;">CONTROLS:</span>
+            <span>[SPACE / UP ARROW / CLICK] Jump</span>
+            <span>·</span>
+            <span>[P / ESC] Pause Menu</span>
+          </div>
+          <div id="next-obstacle-banner" class="font-pixel" style="background:#202124;color:#f7f7f7;padding:6px 12px;font-size:10px;">
+            NEXT OBSTACLE: LVL-01 — Welcome to TeamUp
+          </div>
+        </div>
+
+        <!-- WELCOME / START MENU SCREEN -->
+        <div id="welcome-screen" class="overlay-welcome">
+          <div class="retro-box pointer-auto" style="max-width:680px;width:100%;padding:24px 28px;background:rgba(255,255,255,0.96);">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;border-bottom:2px solid #202124;padding-bottom:10px;margin-bottom:16px;">
+              <span class="font-code" style="font-size:12px;font-weight:700;color:#535353;">
+                UNIVERSITY PROJECT DEFENSE · INTERACTIVE EDITION
+              </span>
+              <button id="btn-welcome-music" class="font-pixel" style="font-size:10px;padding:6px 10px;background:#202124;color:#f7f7f7;border:none;cursor:pointer;">
+                ♪ WELCOME MUSIC: ON (PLAY)
+              </button>
+            </div>
+
+            <!-- Smiling Pixel Dinosaur English Greeting Box -->
+            <div id="welcome-rex-box" style="padding:14px;background:#f7f7f7;border:2px solid #202124;display:flex;align-items:center;gap:16px;cursor:pointer;margin-bottom:16px;" title="Click Rex to hear a friendly 8-bit greeting!">
+              <div style="width:64px;height:64px;background:#ffffff;border:2px solid #202124;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:4px;">
+                <svg viewBox="0 0 20 20" style="width:100%;height:100%;" shape-rendering="crispEdges">
+                  <path fill="#202124" d="M9 1h9v1H9zM8 2h11v2H8zM8 4h2v1H8zm3 0h8v1h-8zM8 5h11v2H8zM8 7h6v1H8zm8 0h2v1h-2zM8 8h9v1H8zM7 9h6v1H7zM1 10h1v1H1zm6 0h7v1H7zm9 0h2v1h-2zM1 11h2v1H1zm5 0h11v1H6zM1 12h3v1H1zm4 0h9v1H5zM1 13h13v2H1zM2 15h11v1H2zM3 16h9v1H3zM4 17h3v2H4zm4 0h3v2H8z" />
+                </svg>
+              </div>
+              <div>
+                <div class="font-pixel" style="font-size:12px;color:#202124;margin-bottom:6px;">
+                  👋 HELLO! I'M REX — YOUR TEAMUP BACKEND GUIDE! ^_^
+                </div>
+                <p class="font-code" style="font-size:12px;color:#535353;margin:0;line-height:1.45;">
+                  "Welcome to TeamUp! Click Start Game to run through the desert, jump over cacti, dodge flying birds, and discover how our C# .NET 10 APIs, 13-Entity Chen ERD, Concurrency Engine, and Gamification system work!"
+                </p>
+              </div>
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <h1 class="font-pixel" style="font-size:26px;margin:0;color:#202124;line-height:1.3;">
+                TEAMUP
+                <span style="display:block;font-size:16px;color:#535353;margin-top:6px;">THE BACKEND RUNNER</span>
+              </h1>
+              <p class="font-pixel" style="font-size:12px;color:#202124;margin:10px 0 6px 0;">
+                "Discover the Engine Behind TeamUp"
+              </p>
+              <p style="font-size:14px;color:#535353;margin:0;line-height:1.5;">
+                Run through the TeamUp Backend world, overcome obstacles, and discover how the system works.
+              </p>
+            </div>
+
+            <!-- Instructions Box -->
+            <div id="welcome-instructions" class="hidden font-code" style="padding:14px;background:#f7f7f7;border:2px solid #202124;font-size:12px;margin-bottom:16px;line-height:1.6;">
+              <div class="font-pixel" style="font-size:11px;color:#202124;margin-bottom:6px;">HOW TO PLAY &amp; PRESENT:</div>
+              <div>1. Click <strong>Start Game</strong>: Rex runs across the desert while Pterodactyl birds fly overhead.</div>
+              <div>2. Press <strong>SPACE</strong> or <strong>UP ARROW</strong> to jump, and click <strong>⏸ PAUSE MENU</strong> (or press <strong>P</strong> / <strong>ESC</strong>) anytime to check your current level, continue, or exit to menu.</div>
+              <div>3. Every cactus triggers one of the <strong>12 Educational Checkpoints</strong> while the background soundtrack continues seamlessly.</div>
+              <div>4. Defeat the <strong>Final Boss</strong> in the 10-question quiz to trigger the <strong>Victory Anthem &amp; Black-and-White Pixel Fireworks</strong>!</div>
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:14px;">
+              <button id="btn-start-game" class="retro-btn font-pixel" style="font-size:13px;padding:12px 24px;">
+                ▶ START GAME
+              </button>
+              <button id="btn-toggle-instructions" class="retro-btn-secondary font-pixel" style="font-size:11px;padding:12px 16px;">
+                ? INSTRUCTIONS
+              </button>
+              <button id="btn-welcome-sound" class="retro-btn-secondary font-pixel" style="font-size:11px;padding:12px 16px;">
+                SOUND: ON
+              </button>
+            </div>
+
+            <div class="font-code" style="padding-top:10px;border-top:1px solid #cfcfcf;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:12px;color:#535353;">
+              <span>SPACE / UP Jump · [P / ESC] Pause Menu · Continuous 8-Bit Soundtrack</span>
+              <span>12 Checkpoints + Final Boss Quiz</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAUSE MENU MODAL -->
+        <div id="pause-modal" class="overlay-center hidden">
+          <div class="retro-box" style="max-width:580px;width:100%;background:#ffffff;overflow:hidden;">
+            <div style="background:#202124;color:#f7f7f7;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;">
+              <span class="font-pixel" style="font-size:13px;">⏸ GAME PAUSED</span>
+              <span id="pause-badge-code" class="font-pixel" style="font-size:10px;background:#f7f7f7;color:#202124;padding:4px 10px;">
+                LVL-01 (1/12)
+              </span>
+            </div>
+
+            <div style="padding:20px 24px;">
+              <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;margin-bottom:18px;">
+                <div class="font-code" style="font-size:11px;font-weight:700;color:#535353;margin-bottom:6px;">
+                  YOUR CURRENT LEVEL &amp; PROGRESS:
+                </div>
+                <div id="pause-level-label" class="font-pixel" style="font-size:13px;color:#202124;margin-bottom:6px;">
+                  LEVEL 1 – WHAT IS TEAMUP?
+                </div>
+                <div id="pause-level-title" class="font-code" style="font-size:12px;font-weight:700;color:#202124;margin-bottom:12px;">
+                  Topic: Welcome to TeamUp — Build Your Skills. Find Your Team. Grow Together.
+                </div>
+                <div class="grid-3 font-code" style="padding-top:10px;border-top:1px solid #cfcfcf;font-size:12px;">
+                  <div>
+                    <span style="color:#535353;font-size:10px;display:block;">COMPLETED</span>
+                    <strong id="pause-completed-text">0 / 12 Levels</strong>
+                  </div>
+                  <div>
+                    <span style="color:#535353;font-size:10px;display:block;">CURRENT SCORE</span>
+                    <strong id="pause-score-text">00000 PTS</strong>
+                  </div>
+                  <div>
+                    <span style="color:#535353;font-size:10px;display:block;">LIVES LEFT</span>
+                    <strong id="pause-lives-text">♥♥♥♥♥</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-bottom:18px;">
+                <div class="font-code" style="font-size:12px;font-weight:700;color:#535353;margin-bottom:8px;">
+                  JUMP TO ANY LEVEL CHECKPOINT (1–12):
+                </div>
+                <div id="pause-level-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;"></div>
+              </div>
+
+              <div class="grid-2" style="gap:12px;">
+                <button id="btn-pause-continue" class="retro-btn font-pixel" style="font-size:11px;padding:12px;">
+                  ▶ CONTINUE GAME
+                </button>
+                <button id="btn-pause-open-slide" class="retro-btn-secondary font-pixel" style="font-size:11px;padding:12px;">
+                  📖 OPEN CURRENT SLIDE
+                </button>
+                <button id="btn-pause-restart" class="retro-btn-secondary font-pixel" style="font-size:11px;padding:12px;">
+                  ↺ RESTART FROM LVL 1
+                </button>
+                <button id="btn-pause-exit" class="retro-btn-secondary font-pixel" style="font-size:11px;padding:12px;">
+                  ✕ EXIT TO MAIN MENU
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EDUCATIONAL CHECKPOINT MODAL -->
+        <div id="checkpoint-modal" class="overlay-center hidden">
+          <div class="retro-box" style="max-width:1120px;width:100%;max-height:90vh;display:flex;flex-direction:column;background:#ffffff;overflow:hidden;">
+            <!-- Modal Top Bar -->
+            <div style="background:#202124;color:#f7f7f7;padding:12px 18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <span id="cp-modal-code" class="font-pixel" style="background:#f7f7f7;color:#202124;font-size:10px;padding:4px 10px;">
+                  LVL-01 (1/12)
+                </span>
+                <span id="cp-modal-level-label" class="font-pixel" style="font-size:13px;">
+                  LEVEL 1 – WHAT IS TEAMUP?
+                </span>
+              </div>
+              <div id="cp-modal-quick-nav" style="display:flex;align-items:center;gap:4px;overflow-x:auto;"></div>
+            </div>
+
+            <!-- Modal Subheader -->
+            <div style="background:#f7f7f7;padding:14px 24px;border-bottom:2px solid #202124;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+              <div>
+                <h2 id="cp-modal-title" class="font-pixel" style="font-size:17px;margin:0;color:#202124;">Welcome to TeamUp</h2>
+                <p id="cp-modal-subtitle" class="font-code" style="font-size:13px;color:#535353;margin:5px 0 0 0;">
+                  Build Your Skills. Find Your Team. Grow Together.
+                </p>
+              </div>
+              <div class="font-code" style="font-size:12px;color:#535353;">
+                OBSTACLE CLEARED · GAME PAUSED FOR BRIEFING
+              </div>
+            </div>
+
+            <!-- Modal Dynamic Body -->
+            <div id="cp-modal-body" style="flex:1;overflow-y:auto;padding:20px 24px;background:#ffffff;"></div>
+
+            <!-- Modal Footer -->
+            <div style="background:#f7f7f7;padding:14px 24px;border-top:2px solid #202124;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+              <div id="cp-modal-next-hint" class="font-code" style="font-size:12px;color:#535353;">
+                Next Up: LVL-02 — Behind the Scenes
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;">
+                <button id="btn-cp-continue" class="retro-btn-secondary font-pixel" style="font-size:11px;padding:10px 16px;">
+                  CONTINUE RUNNING
+                </button>
+                <button id="btn-cp-next" class="retro-btn font-pixel" style="font-size:11px;padding:10px 18px;">
+                  NEXT CHECKPOINT →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FINAL BOSS QUIZ & VICTORY / GAME OVER TOP PANEL -->
+        <div id="boss-panel-wrapper" class="boss-top-overlay hidden">
+          <div id="boss-panel-box" class="retro-box pointer-auto" style="max-width:980px;width:100%;max-height:52vh;overflow-y:auto;background:rgba(255,255,255,0.96);"></div>
+        </div>
+      </main>
+    </div>
+
+    <!-- COMPLETE SELF-CONTAINED GAME, AUDIO & PRESENTATION SCRIPT -->
+    <script>
+      (function () {
+        /* ==========================================================================
+           1. ORIGINAL 8-BIT WEB AUDIO SYNTHESIZER (5 BGM MODES + CONTINUOUS RUNNER)
+           ========================================================================== */
+        class RetroSoundEngine {
+          constructor() {
+            this.ctx = null;
+            this.sfxMuted = false;
+            this.bgmEnabled = true;
+            this.volume = 0.55;
+            this.bgmInterval = null;
+            this.bgmStep = 0;
+            this.currentBgmMode = 'welcome';
+            this.bindAutoUnlock();
+          }
+
+          bindAutoUnlock() {
+            const unlock = () => {
+              const ctx = this.ensureContext();
+              if (ctx && ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+              }
+              if (this.bgmEnabled && !this.sfxMuted && this.bgmInterval === null) {
+                this.startBGM(this.currentBgmMode, false);
+              }
+            };
+            window.addEventListener('pointerdown', unlock, { passive: true });
+            window.addEventListener('keydown', unlock, { passive: true });
+            window.addEventListener('click', unlock, { passive: true });
+            window.addEventListener('touchstart', unlock, { passive: true });
+          }
+
+          ensureContext() {
+            if (!this.ctx) {
+              const AudioCtx = window.AudioContext || window.webkitAudioContext;
+              if (AudioCtx) this.ctx = new AudioCtx();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') {
+              this.ctx.resume().catch(() => {});
+            }
+            return this.ctx;
+          }
+
+          initOnUserGesture() {
+            this.ensureContext();
+            if (this.bgmEnabled && !this.sfxMuted && this.bgmInterval === null) {
+              this.startBGM(this.currentBgmMode, false);
+            }
+          }
+
+          setMuted(muted) {
+            this.sfxMuted = muted;
+            if (muted) {
+              this.stopBGM();
+            } else if (this.bgmEnabled) {
+              this.startBGM(this.currentBgmMode, true);
+            }
+          }
+
+          setBgmEnabled(enabled) {
+            this.bgmEnabled = enabled;
+            if (!enabled) {
+              this.stopBGM();
+            } else if (!this.sfxMuted) {
+              this.startBGM(this.currentBgmMode, true);
+            }
+          }
+
+          setVolume(vol) {
+            this.volume = Math.max(0, Math.min(1, vol));
+          }
+
+          playTone(freq, duration, type = 'square', delay = 0, gainScale = 0.25, slideToFreq = null) {
+            if (this.sfxMuted || this.volume <= 0.01) return;
+            const ctx = this.ensureContext();
+            if (!ctx) return;
+
+            const startTime = ctx.currentTime + delay;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, startTime);
+            if (slideToFreq) {
+              osc.frequency.exponentialRampToValueAtTime(slideToFreq, startTime + duration);
+            }
+
+            const peakGain = Math.max(0.001, this.volume * gainScale);
+            gain.gain.setValueAtTime(peakGain, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + duration + 0.01);
+          }
+
+          playGreeting() {
+            this.playTone(523.25, 0.07, 'square', 0, 0.22);
+            this.playTone(659.25, 0.07, 'square', 0.08, 0.22);
+            this.playTone(783.99, 0.12, 'square', 0.16, 0.24);
+            this.playTone(1046.5, 0.18, 'triangle', 0.26, 0.26);
+          }
+
+          playJump() {
+            this.playTone(240, 0.11, 'square', 0, 0.18, 520);
+          }
+
+          playClick() {
+            this.playTone(660, 0.04, 'square', 0, 0.12);
+          }
+
+          playPauseToggle(paused) {
+            if (paused) {
+              this.playTone(523.25, 0.07, 'square', 0, 0.18);
+              this.playTone(392.0, 0.1, 'square', 0.08, 0.18);
+            } else {
+              this.playTone(392.0, 0.07, 'square', 0, 0.18);
+              this.playTone(523.25, 0.1, 'square', 0.08, 0.18);
+            }
+          }
+
+          playCheckpoint() {
+            this.playTone(440, 0.08, 'square', 0, 0.2);
+            this.playTone(554.37, 0.08, 'square', 0.08, 0.2);
+            this.playTone(659.25, 0.14, 'square', 0.16, 0.22);
+          }
+
+          playAchievement() {
+            [523.25, 659.25, 783.99, 1046.5].forEach((n, idx) => {
+              this.playTone(n, idx === 3 ? 0.28 : 0.09, 'square', idx * 0.09, 0.22);
+            });
+          }
+
+          playBossEntry() {
+            [196, 185, 174.61, 164.81].forEach((n, idx) => {
+              this.playTone(n, 0.14, 'sawtooth', idx * 0.15, 0.25);
+            });
+          }
+
+          playPlayerAttack() {
+            this.playTone(880, 0.08, 'square', 0, 0.26, 220);
+            this.playTone(587.33, 0.09, 'triangle', 0.08, 0.26, 880);
+            this.playTone(1174.66, 0.16, 'square', 0.16, 0.26);
+          }
+
+          playBossAttack() {
+            this.playTone(150, 0.18, 'sawtooth', 0, 0.3, 65);
+            this.playTone(110, 0.22, 'square', 0.12, 0.28, 55);
+          }
+
+          playFireworkBurst() {
+            this.playTone(780, 0.06, 'triangle', 0, 0.09, 180);
+            this.playTone(1120, 0.08, 'square', 0.04, 0.07, 320);
+          }
+
+          playVictory() {
+            const melody = [
+              { f: 523.25, d: 0.12, t: 0 },
+              { f: 523.25, d: 0.12, t: 0.13 },
+              { f: 523.25, d: 0.12, t: 0.26 },
+              { f: 659.25, d: 0.24, t: 0.4 },
+              { f: 587.33, d: 0.14, t: 0.66 },
+              { f: 659.25, d: 0.14, t: 0.82 },
+              { f: 783.99, d: 0.4, t: 0.98 }
+            ];
+            melody.forEach((n) => this.playTone(n.f, n.d, 'square', n.t, 0.24));
+            this.startBGM('victory', true);
+          }
+
+          playGameOver() {
+            const melody = [
+              { f: 392.0, d: 0.18, t: 0 },
+              { f: 369.99, d: 0.18, t: 0.2 },
+              { f: 349.23, d: 0.18, t: 0.4 },
+              { f: 329.63, d: 0.42, t: 0.6 }
+            ];
+            melody.forEach((n) => this.playTone(n.f, n.d, 'sawtooth', n.t, 0.24));
+            this.startBGM('gameover', true);
+          }
+
+          startBGM(mode = 'runner', forceRestart = false) {
+            // Keep playing seamlessly from current note if same mode is already active!
+            if (!forceRestart && this.currentBgmMode === mode && this.bgmInterval !== null) {
+              this.ensureContext();
+              return;
+            }
+            const modeChanged = this.currentBgmMode !== mode;
+            this.currentBgmMode = mode;
+            this.stopBGM();
+            if (this.sfxMuted || !this.bgmEnabled) return;
+            this.ensureContext();
+
+            const seqMap = {
+              welcome: [
+                { f: 392.0, type: 'square', dur: 0.14 },
+                { f: 523.25, type: 'square', dur: 0.14 },
+                { f: 659.25, type: 'square', dur: 0.14 },
+                { f: 783.99, type: 'triangle', dur: 0.22 },
+                { f: 659.25, type: 'square', dur: 0.14 },
+                { f: 523.25, type: 'square', dur: 0.14 },
+                { f: 587.33, type: 'square', dur: 0.14 },
+                { f: 698.46, type: 'triangle', dur: 0.22 },
+                { f: 587.33, type: 'square', dur: 0.14 },
+                { f: 493.88, type: 'square', dur: 0.14 },
+                { f: 392.0, type: 'square', dur: 0.14 },
+                { f: 493.88, type: 'square', dur: 0.14 },
+                { f: 523.25, type: 'square', dur: 0.16 },
+                { f: 392.0, type: 'triangle', dur: 0.14 },
+                { f: 329.63, type: 'triangle', dur: 0.14 },
+                { f: 523.25, type: 'square', dur: 0.24 }
+              ],
+              runner: [
+                { f: 220.0, type: 'triangle', dur: 0.12 },
+                { f: 261.63, type: 'triangle', dur: 0.12 },
+                { f: 329.63, type: 'square', dur: 0.12 },
+                { f: 440.0, type: 'triangle', dur: 0.12 },
+                { f: 392.0, type: 'square', dur: 0.12 },
+                { f: 329.63, type: 'triangle', dur: 0.12 },
+                { f: 293.66, type: 'square', dur: 0.12 },
+                { f: 261.63, type: 'triangle', dur: 0.12 },
+                { f: 196.0, type: 'triangle', dur: 0.12 },
+                { f: 246.94, type: 'triangle', dur: 0.12 },
+                { f: 293.66, type: 'square', dur: 0.12 },
+                { f: 392.0, type: 'triangle', dur: 0.12 },
+                { f: 329.63, type: 'square', dur: 0.12 },
+                { f: 293.66, type: 'triangle', dur: 0.12 },
+                { f: 261.63, type: 'triangle', dur: 0.12 },
+                { f: 246.94, type: 'square', dur: 0.12 }
+              ],
+              boss: [
+                { f: 146.83, type: 'sawtooth', dur: 0.11 },
+                { f: 174.61, type: 'square', dur: 0.11 },
+                { f: 220.0, type: 'sawtooth', dur: 0.11 },
+                { f: 164.81, type: 'square', dur: 0.11 },
+                { f: 146.83, type: 'sawtooth', dur: 0.11 },
+                { f: 207.65, type: 'square', dur: 0.11 },
+                { f: 196.0, type: 'sawtooth', dur: 0.11 },
+                { f: 130.81, type: 'square', dur: 0.11 }
+              ],
+              victory: [
+                { f: 523.25, type: 'square', dur: 0.14 },
+                { f: 659.25, type: 'square', dur: 0.14 },
+                { f: 783.99, type: 'square', dur: 0.16 },
+                { f: 1046.5, type: 'triangle', dur: 0.22 },
+                { f: 783.99, type: 'square', dur: 0.14 },
+                { f: 880.0, type: 'square', dur: 0.14 },
+                { f: 987.77, type: 'square', dur: 0.16 },
+                { f: 1046.5, type: 'square', dur: 0.24 }
+              ],
+              gameover: [
+                { f: 293.66, type: 'triangle', dur: 0.26 },
+                { f: 261.63, type: 'triangle', dur: 0.26 },
+                { f: 246.94, type: 'sawtooth', dur: 0.26 },
+                { f: 220.0, type: 'triangle', dur: 0.34 },
+                { f: 196.0, type: 'triangle', dur: 0.26 },
+                { f: 174.61, type: 'sawtooth', dur: 0.26 },
+                { f: 164.81, type: 'triangle', dur: 0.34 },
+                { f: 146.83, type: 'triangle', dur: 0.4 }
+              ]
+            };
+
+            if (modeChanged || forceRestart) {
+              this.bgmStep = 0;
+            }
+
+            const tempoMap = { welcome: 220, runner: 240, boss: 195, victory: 210, gameover: 420 };
+            const playStep = () => {
+              if (this.sfxMuted || !this.bgmEnabled || this.volume <= 0.01) return;
+              const seq = seqMap[this.currentBgmMode];
+              const item = seq[this.bgmStep % seq.length];
+              const gainLevel =
+                this.currentBgmMode === 'welcome' || this.currentBgmMode === 'victory'
+                  ? 0.09
+                  : this.currentBgmMode === 'gameover'
+                  ? 0.08
+                  : 0.065;
+              this.playTone(item.f, item.dur, item.type, 0, gainLevel);
+              this.bgmStep++;
+            };
+
+            playStep();
+            this.bgmInterval = window.setInterval(playStep, tempoMap[mode]);
+          }
+
+          stopBGM() {
+            if (this.bgmInterval !== null) {
+              clearInterval(this.bgmInterval);
+              this.bgmInterval = null;
+            }
+          }
+        }
+
+        const soundEngine = new RetroSoundEngine();
+
+        /* ==========================================================================
+           2. TEAMUP EDUCATIONAL DATASET (12 CHECKPOINTS, ERD, ENDPOINTS, BOSS QUIZ)
+           ========================================================================== */
+        const CHECKPOINTS = [
+          {
+            id: 1,
+            code: 'LVL-01',
+            levelLabel: 'LEVEL 1 – WHAT IS TEAMUP?',
+            title: 'Welcome to TeamUp',
+            subtitle: 'Build Your Skills. Find Your Team. Grow Together.',
+            cactusVariant: 'single'
+          },
+          {
+            id: 2,
+            code: 'LVL-02',
+            levelLabel: 'LEVEL 2 – UNDERSTANDING THE BACKEND',
+            title: 'Behind the Scenes',
+            subtitle: 'C# / ASP.NET Core (.NET 10) & OpenAPI 3.0 Architecture',
+            cactusVariant: 'double'
+          },
+          {
+            id: 3,
+            code: 'LVL-03',
+            levelLabel: 'LEVEL 3 – DATABASE & ERD',
+            title: 'The Database Engine',
+            subtitle: 'TeamUpDB Chen ERD – 13 Core Entities & Junction Relationships',
+            cactusVariant: 'triple'
+          },
+          {
+            id: 4,
+            code: 'LVL-04',
+            levelLabel: 'LEVEL 4 – API & HTTP METHODS',
+            title: 'The API Control Center',
+            subtitle: 'RESTful Endpoints, JSON Contracts & HTTP Status Codes',
+            cactusVariant: 'double'
+          },
+          {
+            id: 5,
+            code: 'LVL-05',
+            levelLabel: 'LEVEL 5 – EVENTS & WORKSHOPS',
+            title: 'Event Management System',
+            subtitle: 'EventsController (/api/v1/events) & Multi-Session Workshops',
+            cactusVariant: 'triple'
+          },
+          {
+            id: 6,
+            code: 'LVL-06',
+            levelLabel: 'LEVEL 6 – EVENT REGISTRATION',
+            title: 'Registration System & Concurrency',
+            subtitle: 'Anti-Overbooking Engine with Serializable Isolation & Row Locks',
+            cactusVariant: 'double'
+          },
+          {
+            id: 7,
+            code: 'LVL-07',
+            levelLabel: 'LEVEL 7 – SESSION ATTENDANCE',
+            title: 'Attendance Tracking',
+            subtitle: 'Multi-Method Verification: QRCode, RFID & Manual Check-In',
+            cactusVariant: 'triple'
+          },
+          {
+            id: 8,
+            code: 'LVL-08',
+            levelLabel: 'LEVEL 8 – GAMIFICATION & SCORE LEDGER',
+            title: 'The Gamification Engine',
+            subtitle: 'Immutable ScoreTransaction Ledger & Non-Linear Level Formula',
+            cactusVariant: 'double'
+          },
+          {
+            id: 9,
+            code: 'LVL-09',
+            levelLabel: 'LEVEL 9 – BADGES & ACHIEVEMENTS',
+            title: 'Achievements Unlocked',
+            subtitle: 'Automated Criteria Evaluation & StudentBadge Awarding',
+            cactusVariant: 'single'
+          },
+          {
+            id: 10,
+            code: 'LVL-10',
+            levelLabel: 'LEVEL 10 – NOTIFICATIONS',
+            title: 'The Notification System',
+            subtitle: 'Real-Time Inbox, Read States & Owner-Based Access Control',
+            cactusVariant: 'double'
+          },
+          {
+            id: 11,
+            code: 'LVL-11',
+            levelLabel: 'CROSS-MODULE INTEGRATION',
+            title: 'Connected Backend Pipeline',
+            subtitle: 'How One Action Cascades Across All 6 Backend Modules & Frontend UI',
+            cactusVariant: 'triple'
+          },
+          {
+            id: 12,
+            code: 'LVL-12',
+            levelLabel: 'SECURITY & AUTHENTICATION',
+            title: 'Security Checkpoint',
+            subtitle: 'JWT Bearer Tokens, RBAC Roles & Ownership Validation',
+            cactusVariant: 'gate'
+          }
+        ];
+
+        const ERD_ENTITIES = [
+          {
+            id: 'University',
+            name: 'University',
+            category: 'Academic & Profile',
+            pk: 'UniversityID',
+            attributes: ['UniversityID (PK)', 'Name', 'Domain', 'Location', 'CreatedAt'],
+            description: 'Root academic institution entity that contains multiple faculties across campus.',
+            junctionTables: [],
+            relationships: [{ target: 'Faculty', cardinality: '1:N' }]
+          },
+          {
+            id: 'Faculty',
+            name: 'Faculty',
+            category: 'Academic & Profile',
+            pk: 'FacultyID',
+            attributes: ['FacultyID (PK)', 'UniversityID (FK)', 'Name', 'Code'],
+            description: 'Academic faculty or college within a university where students are enrolled.',
+            junctionTables: [],
+            relationships: [
+              { target: 'University', cardinality: 'N:1' },
+              { target: 'Student', cardinality: '1:N' }
+            ]
+          },
+          {
+            id: 'Student',
+            name: 'Student',
+            category: 'Academic & Profile',
+            pk: 'StudentID',
+            attributes: [
+              'StudentID (PK)', 'FacultyID (FK)', 'FullName', 'UniversityEmail',
+              'PasswordHash', 'AcademicYear (1–4)', 'Role (Student/OrgAdmin/PlatformAdmin)',
+              'TotalPoints', 'CurrentLevel'
+            ],
+            description: 'Central user entity in TeamUpDB connecting skills, projects, activities, events, scores, and badges.',
+            junctionTables: ['StudentSkill', 'ProjectApplication', 'ProjectMember', 'OrgJoinRequest', 'OrgMember', 'EventRegistration', 'SessionAttendance', 'StudentBadge'],
+            relationships: [
+              { target: 'StudentProfile', cardinality: '1:1' },
+              { target: 'Skill', cardinality: 'M:N', via: 'StudentSkill (ProficiencyLevel, YearsOfExperience)' },
+              { target: 'Project', cardinality: 'M:N', via: 'ProjectApplication / ProjectMember' },
+              { target: 'Event', cardinality: 'M:N', via: 'EventRegistration' },
+              { target: 'EventSession', cardinality: 'M:N', via: 'SessionAttendance' },
+              { target: 'ScoreTransaction', cardinality: '1:N' },
+              { target: 'Badge', cardinality: 'M:N', via: 'StudentBadge' },
+              { target: 'Notification', cardinality: '1:N' }
+            ]
+          },
+          {
+            id: 'StudentProfile',
+            name: 'StudentProfile',
+            category: 'Academic & Profile',
+            pk: 'ProfileID',
+            attributes: ['ProfileID (PK)', 'StudentID (FK, UNIQUE)', 'Bio', 'GitHubUrl', 'LinkedInUrl', 'PortfolioUrl'],
+            description: 'One-to-One academic and professional portfolio extension for each Student.',
+            junctionTables: [],
+            relationships: [{ target: 'Student', cardinality: '1:1' }]
+          },
+          {
+            id: 'Skill',
+            name: 'Skill',
+            category: 'Academic & Profile',
+            pk: 'SkillID',
+            attributes: ['SkillID (PK)', 'SkillName', 'Category', 'Description'],
+            description: 'Standardized skill catalog linking students to project skill requirements.',
+            junctionTables: ['StudentSkill (ProficiencyLevel, YearsOfExperience)', 'ProjectRequiredSkill (IsMandatory)'],
+            relationships: [
+              { target: 'Student', cardinality: 'M:N', via: 'StudentSkill' },
+              { target: 'Project', cardinality: 'M:N', via: 'ProjectRequiredSkill' }
+            ]
+          },
+          {
+            id: 'Project',
+            name: 'Project',
+            category: 'Projects & Tasks',
+            pk: 'ProjectID',
+            attributes: ['ProjectID (PK)', 'CreatorStudentID (FK)', 'Title', 'MaxTeamSize', 'Status', 'CreatedAt'],
+            description: 'Student-created academic, hackathon, or graduation project seeking teammates with complementary skills.',
+            junctionTables: ['ProjectRequiredSkill', 'ProjectApplication', 'ProjectMember'],
+            relationships: [
+              { target: 'Student', cardinality: 'M:N', via: 'ProjectApplication & ProjectMember' },
+              { target: 'Skill', cardinality: 'M:N', via: 'ProjectRequiredSkill' },
+              { target: 'Task', cardinality: '1:N' }
+            ]
+          },
+          {
+            id: 'Task',
+            name: 'Task',
+            category: 'Projects & Tasks',
+            pk: 'TaskID',
+            attributes: ['TaskID (PK)', 'ProjectID (FK)', 'AssignedToStudentID (FK)', 'Title', 'Status', 'DueDate'],
+            description: 'Actionable work item on the Project Tasks Board assigned to a project member.',
+            junctionTables: [],
+            relationships: [
+              { target: 'Project', cardinality: 'N:1' },
+              { target: 'Student', cardinality: 'N:1' }
+            ]
+          },
+          {
+            id: 'Organization',
+            name: 'Organization',
+            category: 'Activities & Events',
+            pk: 'OrganizationID',
+            attributes: ['OrganizationID (PK)', 'Name (IEEE, GDG, Enactus, ACM)', 'Category', 'RecruitmentOpen'],
+            description: 'Campus student activity or club managed by an OrgAdmin that recruits members and hosts events.',
+            junctionTables: ['OrgJoinRequest', 'OrgMember'],
+            relationships: [
+              { target: 'Student', cardinality: 'M:N', via: 'OrgJoinRequest / OrgMember' },
+              { target: 'Event', cardinality: '1:N' }
+            ]
+          },
+          {
+            id: 'Event',
+            name: 'Event',
+            category: 'Activities & Events',
+            pk: 'EventID',
+            attributes: ['EventID (PK)', 'OrganizationID (FK)', 'Title', 'Capacity', 'RegisteredCount', 'Status'],
+            description: 'Workshop, seminar, or competition with strict seat Capacity and multiple EventSessions.',
+            junctionTables: ['EventRegistration'],
+            relationships: [
+              { target: 'Organization', cardinality: 'N:1' },
+              { target: 'EventSession', cardinality: '1:N' },
+              { target: 'Student', cardinality: 'M:N', via: 'EventRegistration' }
+            ]
+          },
+          {
+            id: 'EventSession',
+            name: 'EventSession',
+            category: 'Activities & Events',
+            pk: 'SessionID',
+            attributes: ['SessionID (PK)', 'EventID (FK)', 'Title', 'SessionDate', 'StartTime', 'LocationOrRoom'],
+            description: 'Individual scheduled session belonging to an Event where student attendance is verified.',
+            junctionTables: ['SessionAttendance (QRCode/RFID/Manual, UNIQUE(SessionID, StudentID))'],
+            relationships: [
+              { target: 'Event', cardinality: 'N:1' },
+              { target: 'Student', cardinality: 'M:N', via: 'SessionAttendance' }
+            ]
+          },
+          {
+            id: 'ScoreTransaction',
+            name: 'ScoreTransaction',
+            category: 'Gamification & Alerts',
+            pk: 'TransactionID',
+            attributes: ['TransactionID (PK)', 'StudentID (FK)', 'Points (+100)', 'Reason', 'SourceType', 'CreatedAt'],
+            description: 'Immutable financial-style score ledger recording every point transaction earned by a student.',
+            junctionTables: [],
+            relationships: [{ target: 'Student', cardinality: 'N:1' }]
+          },
+          {
+            id: 'Badge',
+            name: 'Badge',
+            category: 'Gamification & Alerts',
+            pk: 'BadgeID',
+            attributes: ['BadgeID (PK)', 'Name', 'CriteriaType', 'CriteriaValue'],
+            description: 'Achievement definition in the platform catalog automatically awarded when CriteriaValue is reached.',
+            junctionTables: ['StudentBadge (StudentID, BadgeID, AwardedAt)'],
+            relationships: [{ target: 'Student', cardinality: 'M:N', via: 'StudentBadge' }]
+          },
+          {
+            id: 'Notification',
+            name: 'Notification',
+            category: 'Gamification & Alerts',
+            pk: 'NotificationID',
+            attributes: ['NotificationID (PK)', 'StudentID (FK)', 'Title', 'Message', 'Type', 'IsRead', 'CreatedAt'],
+            description: 'Personal notification inbox item delivered to a student upon registration, points, or badge unlock.',
+            junctionTables: [],
+            relationships: [{ target: 'Student', cardinality: 'N:1' }]
+          }
+        ];
+
+        const API_ENDPOINTS = [
+          {
+            method: 'GET',
+            controller: 'EventsController',
+            route: '/api/v1/events',
+            authRole: 'Public / Student',
+            summary: 'Retrieve paginated list of university workshops, capacities, and sessions.',
+            responseStatus: 200,
+            responseBody: '{\n  "data": [\n    {\n      "eventId": 42,\n      "organization": "IEEE Campus Branch",\n      "title": "Data Analysis Workshop",\n      "capacity": 100,\n      "registeredCount": 99,\n      "sessionsCount": 3\n    }\n  ]\n}'
+          },
+          {
+            method: 'POST',
+            controller: 'EventsController',
+            route: '/api/v1/events',
+            authRole: 'OrgAdmin / PlatformAdmin',
+            summary: 'Create a new workshop or event with capacity limits and multi-session schedule.',
+            requestBody: '{\n  "organizationId": 4,\n  "title": "Data Analysis Workshop",\n  "capacity": 100,\n  "sessions": [\n    { "title": "Session 1: Python & Pandas", "room": "Hall B2" }\n  ]\n}',
+            responseStatus: 201,
+            responseBody: '{\n  "eventId": 42,\n  "message": "Event and sessions created successfully."\n}'
+          },
+          {
+            method: 'POST',
+            controller: 'RegistrationsController',
+            route: '/api/v1/events/42/registrations',
+            authRole: 'Student (JWT Bearer)',
+            summary: 'Register student in event #42 using Serializable transaction + UPDLOCK, HOLDLOCK.',
+            requestBody: '{\n  "studentId": 1084\n}',
+            responseStatus: 201,
+            responseBody: '{\n  "registrationId": 9012,\n  "eventId": 42,\n  "studentId": 1084,\n  "status": "Confirmed",\n  "remainingSeats": 0\n}'
+          },
+          {
+            method: 'POST',
+            controller: 'AttendanceController',
+            route: '/api/v1/sessions/105/attendance',
+            authRole: 'OrgAdmin / PlatformAdmin',
+            summary: 'Verify session attendance via QRCode, RFID, or Manual check-in & trigger +100 pts.',
+            requestBody: '{\n  "studentId": 1084,\n  "verificationMethod": "QRCode"\n}',
+            responseStatus: 201,
+            responseBody: '{\n  "attendanceId": 551,\n  "verificationMethod": "QRCode",\n  "scoreTransaction": { "pointsAwarded": 100, "newLevel": 3 }\n}'
+          },
+          {
+            method: 'GET',
+            controller: 'GamificationController',
+            route: '/api/v1/students/1084/score',
+            authRole: 'Student / Public',
+            summary: 'Fetch student TotalPoints, dynamic CurrentLevel, and immutable ScoreTransaction history.',
+            responseStatus: 200,
+            responseBody: '{\n  "studentId": 1084,\n  "totalPoints": 400,\n  "currentLevel": 3,\n  "formula": "FLOOR(SQRT(400 / 100)) + 1 = 3"\n}'
+          },
+          {
+            method: 'PATCH',
+            controller: 'NotificationsController',
+            route: '/api/v1/notifications/mark-all-read',
+            authRole: 'Student (Owner Only)',
+            summary: 'Mark all unread notifications in the authenticated student inbox as IsRead = true.',
+            responseStatus: 200,
+            responseBody: '{\n  "updatedCount": 4,\n  "unreadRemaining": 0\n}'
+          }
+        ];
+
+        const STATUS_CODES = [
+          { code: 200, name: '200 OK', cat: 'Success', desc: 'GET /api/v1/events or PATCH /mark-all-read succeeded.' },
+          { code: 201, name: '201 Created', cat: 'Success', desc: 'POST registration, event, or session attendance record created.' },
+          { code: 204, name: '204 No Content', cat: 'Success', desc: 'DELETE registration or notification completed with empty body.' },
+          { code: 400, name: '400 Bad Request', cat: 'Client Error', desc: 'Invalid DTO payload (e.g. negative Capacity or invalid method).' },
+          { code: 401, name: '401 Unauthorized', cat: 'Client Error', desc: 'Missing or expired JWT Bearer token on [Authorize] endpoint.' },
+          { code: 403, name: '403 Forbidden', cat: 'Client Error', desc: 'Student attempted an OrgAdmin/PlatformAdmin action or non-owner access.' },
+          { code: 404, name: '404 Not Found', cat: 'Client Error', desc: 'Requested EventID, SessionID, or StudentID does not exist.' },
+          { code: 409, name: '409 Conflict', cat: 'Client Error', desc: 'Event capacity is full (100/100 lock) OR duplicate attendance/registration!' },
+          { code: 500, name: '500 Server Error', cat: 'Server Error', desc: 'Unhandled database exception; transaction safely rolled back.' }
+        ];
+
+        const BOSS_QUIZ_QUESTIONS = [
+          {
+            id: 1,
+            topic: '1. TeamUp Business Purpose & Roles',
+            question: 'What core problem does TeamUp solve for university students, and which 3 roles govern the platform?',
+            options: [
+              'Replaces random WhatsApp/Facebook team searches with verified skill portfolios & activities using Student, OrgAdmin, and PlatformAdmin roles.',
+              'Provides video streaming lectures using Teacher, Dean, and Guest roles.',
+              'Manages university cafeteria payments using Cashier, Student, and Auditor roles.',
+              'Replaces campus Wi-Fi routers using NetworkAdmin, Developer, and Moderator roles.'
+            ],
+            correctIndex: 0,
+            explanation: 'TeamUp connects university students to form skill-matched project teams, join student activities (IEEE, GDG, Enactus, ACM), verify workshop attendance, and earn gamified portfolios under three roles: Student, OrgAdmin, and PlatformAdmin.'
+          },
+          {
+            id: 2,
+            topic: '2. Backend Architecture & Stack',
+            question: 'Which backend framework and API documentation standard power the 6 RESTful Controllers in TeamUp?',
+            options: [
+              'PHP 5 with SOAP XML descriptors.',
+              'C# / ASP.NET Core (.NET 10) with Swagger / OpenAPI 3.0 documentation.',
+              'Ruby on Rails with GraphQL-only resolvers.',
+              'Plain static HTML files without a backend server.'
+            ],
+            correctIndex: 1,
+            explanation: 'The TeamUp Backend is built with C# and ASP.NET Core (.NET 10), exposing 6 RESTful controllers (Events, Registrations, Attendance, Gamification, Badges, Notifications) documented with Swagger / OpenAPI 3.0.'
+          },
+          {
+            id: 3,
+            topic: '3. API Communication & Request Lifecycle',
+            question: 'When a student clicks "Register" on the Frontend, what is the accurate Backend request lifecycle?',
+            options: [
+              'Frontend directly edits SQL tables in the browser without calling an API.',
+              'User Action → Frontend HTTP Request → ASP.NET Core API Controller → Business Logic & Transaction → TeamUpDB → JSON Response.',
+              'Database sends an email to the browser before the user clicks anything.',
+              'CSS animations directly generate database primary keys.'
+            ],
+            correctIndex: 1,
+            explanation: 'Every interaction follows the structured pipeline: User Action → Frontend HTTP Request (with JWT header) → API Controller → Backend Business Logic & Validation → TeamUpDB → HTTP Status + JSON Response.'
+          },
+          {
+            id: 4,
+            topic: '4. Database Relationships & Chen ERD',
+            question: 'In TeamUpDB (13 Core Entities), how is the Many-to-Many (M:N) relationship between Student and Skill modeled?',
+            options: [
+              'By storing comma-separated skill names inside the Student FullName column.',
+              'Through the StudentSkill junction table, which also stores ProficiencyLevel and YearsOfExperience.',
+              'Skills are linked only to Universities, never to Students.',
+              'Via a One-to-One link between Notification and Badge.'
+            ],
+            correctIndex: 1,
+            explanation: 'In the TeamUpDB Chen ERD, Student and Skill have an M:N relationship resolved via the StudentSkill junction table, which stores relationship attributes ProficiencyLevel and YearsOfExperience.'
+          },
+          {
+            id: 5,
+            topic: '5. HTTP Methods & Status Codes',
+            question: 'Which HTTP method and status code pair is used when marking notifications as read vs. rejecting an overbooked registration?',
+            options: [
+              'PATCH (200 OK) for mark-all-read; POST returning 409 Conflict when event capacity is full.',
+              'GET (500 Error) for mark-all-read; DELETE (200 OK) for overbooking.',
+              'PUT (404 Not Found) for all successful requests.',
+              'POST (204 No Content) when a user is unauthenticated.'
+            ],
+            correctIndex: 0,
+            explanation: 'PATCH /api/v1/notifications/mark-all-read performs a partial state update (IsRead = true, 200 OK), while an overbooked or duplicate registration returns 409 Conflict.'
+          },
+          {
+            id: 6,
+            topic: '6. Event Registration & Anti-Overbooking Concurrency',
+            question: 'How does the TeamUp Backend prevent overbooking when 1 seat remains (Capacity = 100, Registered = 99) and two students click Register at the exact same millisecond?',
+            options: [
+              'It allows 101 students and deletes a random student the next day.',
+              'It wraps seat verification in a Database Transaction with IsolationLevel.Serializable and SQL row locks (UPDLOCK, HOLDLOCK).',
+              'It disables the website for 10 minutes after every click.',
+              'It relies solely on a frontend CSS disabled class.'
+            ],
+            correctIndex: 1,
+            explanation: 'To eliminate race conditions, RegistrationsController uses a Database Transaction with IsolationLevel.Serializable and UPDLOCK, HOLDLOCK when reading RegisteredCount—accepting the first request (201) and returning 409 Conflict to the second.'
+          },
+          {
+            id: 7,
+            topic: '7. Multi-Method Session Attendance Validation',
+            question: 'What 3 attendance verification methods are supported by AttendanceController, and how are duplicate check-ins prevented?',
+            options: [
+              'QRCode, RFID, and Manual check-in; protected by a UNIQUE (SessionID, StudentID) constraint.',
+              'SMS, Fax, and Postal Mail; no duplicate check is performed.',
+              'Bluetooth only; duplicates are allowed to earn bonus points.',
+              'Selfie upload only; checked manually once per semester.'
+            ],
+            correctIndex: 0,
+            explanation: 'SessionAttendance supports QRCode, RFID, and Manual verification by an OrgAdmin, and enforces UNIQUE (SessionID, StudentID) in both database schema and backend logic so a student cannot check in twice to farm points.'
+          },
+          {
+            id: 8,
+            topic: '8. Gamification & Immutable Score Ledger',
+            question: 'Why does TeamUp use the ScoreTransaction table, and what exact mathematical formula calculates a student\'s CurrentLevel?',
+            options: [
+              'It stores an immutable ledger of every point change; CurrentLevel = FLOOR(SQRT(TotalPoints / 100)) + 1.',
+              'It overwrites a single random number; CurrentLevel = TotalPoints * 10.',
+              'It deletes old points every week; CurrentLevel = TotalPoints / 1000.',
+              'Points are stored only in browser cookies with no backend formula.'
+            ],
+            correctIndex: 0,
+            explanation: 'ScoreTransaction acts as an immutable audit ledger (Points, Reason, SourceType, CreatedAt). The student\'s level is computed non-linearly via CurrentLevel = FLOOR(SQRT(TotalPoints / 100)) + 1.'
+          },
+          {
+            id: 9,
+            topic: '9. JWT Authentication & RBAC Authorization',
+            question: 'What is the difference between Authentication and Authorization in TeamUp\'s security architecture?',
+            options: [
+              'They are identical terms for CSS styling.',
+              'Authentication verifies "Who are you?" via JWT Bearer token; Authorization enforces "What are you allowed to do?" via RBAC roles (Student, OrgAdmin, PlatformAdmin) and ownership checks.',
+              'Authentication checks event capacity; Authorization calculates square roots.',
+              'Authorization happens before login without any token.'
+            ],
+            correctIndex: 1,
+            explanation: 'Authentication confirms identity via JWT Bearer tokens ([Authorize]), whereas Authorization enforces Role-Based Access Control (only OrgAdmin/PlatformAdmin can manage events/attendance) and resource ownership (students can only modify their own notifications).'
+          },
+          {
+            id: 10,
+            topic: '10. Cross-Module Integration & Notification Flow',
+            question: 'What happens automatically in the Backend right after an OrgAdmin verifies a student\'s Session Attendance?',
+            options: [
+              'Nothing else happens; all modules are completely isolated.',
+              'A +100 pts ScoreTransaction is logged → TotalPoints & CurrentLevel update → Badge criteria (CriteriaType/Value) are evaluated → StudentBadge is awarded if met → a Notification is delivered to the student.',
+              'The event is deleted from TeamUpDB.',
+              'All other students lose 100 points.'
+            ],
+            correctIndex: 1,
+            explanation: 'TeamUp modules are tightly integrated: verified SessionAttendance triggers a +100 pts ScoreTransaction, recalculates CurrentLevel, checks Badge thresholds to auto-award StudentBadge, and pushes an unread Notification to the student\'s inbox.'
+          }
+        ];
+
+        /* ==========================================================================
+           3. APPLICATION & GAME STATE
+           ========================================================================== */
+        let gameMode = 'START_SCREEN'; // 'START_SCREEN' | 'RUNNING' | 'CHECKPOINT_MODAL' | 'BOSS_QUIZ' | 'VICTORY' | 'GAME_OVER'
+        let isPaused = false;
+        let currentCheckpointIndex = 0;
+        let completedCheckpoints = [];
+        let score = 0;
+        let highScore = 1250;
+        let lives = 5;
+        let bossHp = 100;
+        let reducedMotion = false;
+
+        // Interactive Checkpoint Widget States
+        let lifecycleStep = 0;
+        let selectedEntityId = 'Student';
+        let showOriginalErdImage = false;
+        let selectedEndpointIdx = 2;
+        let selectedStatusIdx = 7;
+        let workshopSessions = [
+          { id: 101, title: 'Session 1: Python & Data Cleaning', room: 'Hall B2', time: '10:00 - 12:00' },
+          { id: 102, title: 'Session 2: Exploratory Visuals & Pandas', room: 'Lab 4', time: '13:00 - 15:00' },
+          { id: 103, title: 'Session 3: Statistical Modeling Capstone', room: 'Auditorium A', time: '15:30 - 17:30' }
+        ];
+        let raceSimulated = false;
+        let attendanceMethod = 'QRCode';
+        let checkedInCount = 0;
+        let ledgerTransactions = [
+          { id: 1, points: 100, reason: 'Welcome Persistent Email Auth Bonus', source: 'AuthSystem', time: '09:00:12' },
+          { id: 2, points: 100, reason: 'Attended Data Analysis Session #1', source: 'SessionAttendance', time: '12:04:45' },
+          { id: 3, points: 100, reason: 'Completed Project Task #14', source: 'ProjectTask', time: '14:20:09' }
+        ];
+        let badgeUnlockedDemo = false;
+        let notificationsList = [
+          { id: 501, title: 'Registration Confirmed', message: 'Seat #100 reserved for Data Analysis Workshop.', type: 'EventRegistration', isRead: false },
+          { id: 502, title: '+100 Points Earned!', message: 'QRCode Attendance verified in Session #105.', type: 'ScoreTransaction', isRead: false },
+          { id: 503, title: 'Achievement Unlocked: Workshop Pioneer', message: 'You reached 300+ TotalPoints! StudentBadge granted.', type: 'BadgeAwarded', isRead: true }
+        ];
+        let cascadeStep = 5;
+        let activeRole = 'Student';
+
+        // Boss Quiz State
+        let currentQuestionIdx = 0;
+        let selectedOption = null;
+        let quizScore = 0;
+        let quizHistory = [];
+        let showFullBreakdown = false;
+
+        /* ==========================================================================
+           4. DOM ELEMENT REFERENCES & UI SYNCHRONIZATION
+           ========================================================================== */
+        const elHudLevel = document.getElementById('hud-level-text');
+        const elHudCpCount = document.getElementById('hud-cp-count');
+        const elHudLives = document.getElementById('hud-lives');
+        const elHudScore = document.getElementById('hud-score');
+        const elHudHiScore = document.getElementById('hud-hi-score');
+        const btnHudPause = document.getElementById('btn-hud-pause');
+        const btnHudOpenSlide = document.getElementById('btn-hud-open-slide');
+        const btnSfxToggle = document.getElementById('btn-sfx-toggle');
+        const btnBgmToggle = document.getElementById('btn-bgm-toggle');
+        const inputVolume = document.getElementById('input-volume');
+        const btnMotionToggle = document.getElementById('btn-motion-toggle');
+        const cpStripContainer = document.getElementById('cp-strip-container');
+        const btnBossStrip = document.getElementById('btn-boss-strip');
+
+        const canvas = document.getElementById('dino-canvas');
+        const canvasPauseWrapper = document.getElementById('canvas-pause-wrapper');
+        const btnCanvasPause = document.getElementById('btn-canvas-pause');
+        const runningFooterHint = document.getElementById('running-footer-hint');
+        const nextObstacleBanner = document.getElementById('next-obstacle-banner');
+
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const welcomeInstructions = document.getElementById('welcome-instructions');
+        const btnToggleInstructions = document.getElementById('btn-toggle-instructions');
+        const btnWelcomeSound = document.getElementById('btn-welcome-sound');
+        const btnWelcomeMusic = document.getElementById('btn-welcome-music');
+
+        const pauseModal = document.getElementById('pause-modal');
+        const pauseBadgeCode = document.getElementById('pause-badge-code');
+        const pauseLevelLabel = document.getElementById('pause-level-label');
+        const pauseLevelTitle = document.getElementById('pause-level-title');
+        const pauseCompletedText = document.getElementById('pause-completed-text');
+        const pauseScoreText = document.getElementById('pause-score-text');
+        const pauseLivesText = document.getElementById('pause-lives-text');
+        const pauseLevelGrid = document.getElementById('pause-level-grid');
+        const btnPauseOpenSlide = document.getElementById('btn-pause-open-slide');
+
+        const checkpointModal = document.getElementById('checkpoint-modal');
+        const cpModalCode = document.getElementById('cp-modal-code');
+        const cpModalLevelLabel = document.getElementById('cp-modal-level-label');
+        const cpModalQuickNav = document.getElementById('cp-modal-quick-nav');
+        const cpModalTitle = document.getElementById('cp-modal-title');
+        const cpModalSubtitle = document.getElementById('cp-modal-subtitle');
+        const cpModalBody = document.getElementById('cp-modal-body');
+        const cpModalNextHint = document.getElementById('cp-modal-next-hint');
+        const btnCpContinue = document.getElementById('btn-cp-continue');
+        const btnCpNext = document.getElementById('btn-cp-next');
+
+        const bossPanelWrapper = document.getElementById('boss-panel-wrapper');
+        const bossPanelBox = document.getElementById('boss-panel-box');
+
+        function formatScore(val) {
+          return String(Math.floor(val)).padStart(5, '0');
+        }
+
+        function syncUI() {
+          const activeCp = CHECKPOINTS[currentCheckpointIndex] || CHECKPOINTS[0];
+          if (score > highScore) highScore = score;
+
+          elHudLevel.textContent = `LEVEL: ${Math.min(currentCheckpointIndex + 1, CHECKPOINTS.length)}/${CHECKPOINTS.length} (${activeCp.code})`;
+          elHudCpCount.textContent = `CHECKPOINTS: ${completedCheckpoints.length}/${CHECKPOINTS.length}`;
+          elHudLives.textContent = `LIVES: ${'♥'.repeat(Math.max(0, lives))}${'♡'.repeat(Math.max(0, 5 - lives))}`;
+          elHudScore.textContent = formatScore(score);
+          elHudHiScore.textContent = formatScore(highScore);
+
+          // HUD Pause & Open Slide visibility
+          if (gameMode === 'RUNNING') {
+            btnHudPause.classList.remove('hidden');
+            btnHudPause.textContent = isPaused ? '▶ RESUME' : '⏸ PAUSE';
+            btnHudPause.style.background = isPaused ? '#202124' : '#ffffff';
+            btnHudPause.style.color = isPaused ? '#f7f7f7' : '#202124';
+
+            btnHudOpenSlide.classList.remove('hidden');
+            btnHudOpenSlide.textContent = `Open ${activeCp.code} Panel`;
+
+            canvasPauseWrapper.classList.remove('hidden');
+            btnCanvasPause.textContent = isPaused ? '▶ RESUME GAME' : '⏸ PAUSE MENU';
+
+            runningFooterHint.classList.remove('hidden');
+            nextObstacleBanner.textContent = `NEXT OBSTACLE: ${activeCp.code} — ${activeCp.title}`;
+          } else {
+            btnHudPause.classList.add('hidden');
+            btnHudOpenSlide.classList.add('hidden');
+            canvasPauseWrapper.classList.add('hidden');
+            runningFooterHint.classList.add('hidden');
+          }
+
+          btnSfxToggle.textContent = `SFX: ${soundEngine.sfxMuted ? 'OFF' : 'ON'}`;
+          btnBgmToggle.textContent = `BGM: ${soundEngine.bgmEnabled && !soundEngine.sfxMuted ? 'ON' : 'OFF'}`;
+          btnWelcomeSound.textContent = `SOUND: ${soundEngine.sfxMuted ? 'OFF' : 'ON'}`;
+          btnWelcomeMusic.textContent = `♪ WELCOME MUSIC: ${soundEngine.bgmEnabled && !soundEngine.sfxMuted ? 'ON (PLAY)' : 'MUTED'}`;
+          btnMotionToggle.textContent = `MOTION: ${reducedMotion ? 'REDUCED' : 'FULL'}`;
+
+          // Checkpoint Strip Pills
+          cpStripContainer.innerHTML = '';
+          CHECKPOINTS.forEach((cp, idx) => {
+            const btn = document.createElement('button');
+            const isDone = completedCheckpoints.includes(idx);
+            const isCurr = idx === currentCheckpointIndex && gameMode !== 'START_SCREEN';
+            btn.className = 'cp-pill font-code' + (isCurr ? ' current' : isDone ? ' done' : '');
+            btn.textContent = (isDone ? '✓ ' : '') + cp.code;
+            btn.title = `${cp.levelLabel}: ${cp.title}`;
+            btn.onclick = () => {
+              soundEngine.initOnUserGesture();
+              soundEngine.playClick();
+              openCheckpointAtIndex(idx);
+            };
+            cpStripContainer.appendChild(btn);
+          });
+
+          // Boss Unlock Strip Button
+          const bossUnlocked = completedCheckpoints.length >= CHECKPOINTS.length;
+          btnBossStrip.disabled = !bossUnlocked;
+          btnBossStrip.style.background = bossUnlocked ? '#202124' : '#e0e0e0';
+          btnBossStrip.style.color = bossUnlocked ? '#f7f7f7' : '#757575';
+          btnBossStrip.style.borderColor = bossUnlocked ? '#202124' : '#cfcfcf';
+          btnBossStrip.style.cursor = bossUnlocked ? 'pointer' : 'not-allowed';
+          btnBossStrip.textContent = bossUnlocked
+            ? '⚔ FINAL BOSS UNLOCKED'
+            : `🔒 BOSS (${completedCheckpoints.length}/12)`;
+
+          // Overlays
+          welcomeScreen.classList.toggle('hidden', gameMode !== 'START_SCREEN');
+          pauseModal.classList.toggle('hidden', !(gameMode === 'RUNNING' && isPaused));
+          checkpointModal.classList.toggle('hidden', gameMode !== 'CHECKPOINT_MODAL');
+          bossPanelWrapper.classList.toggle(
+            'hidden',
+            !(gameMode === 'BOSS_QUIZ' || gameMode === 'VICTORY' || gameMode === 'GAME_OVER')
+          );
+
+          if (gameMode === 'RUNNING' && isPaused) {
+            renderPauseModal();
+          }
+          if (gameMode === 'CHECKPOINT_MODAL') {
+            renderCheckpointModal();
+          }
+          if (gameMode === 'BOSS_QUIZ' || gameMode === 'VICTORY' || gameMode === 'GAME_OVER') {
+            renderBossPanel();
+          }
+        }
+
+        /* ==========================================================================
+           5. PAUSE MODAL RENDERER
+           ========================================================================== */
+        function renderPauseModal() {
+          const activeCp = CHECKPOINTS[currentCheckpointIndex] || CHECKPOINTS[0];
+          pauseBadgeCode.textContent = `${activeCp.code} (${currentCheckpointIndex + 1}/${CHECKPOINTS.length})`;
+          pauseLevelLabel.textContent = activeCp.levelLabel;
+          pauseLevelTitle.textContent = `Topic: ${activeCp.title} — ${activeCp.subtitle}`;
+          pauseCompletedText.textContent = `${completedCheckpoints.length} / ${CHECKPOINTS.length} Levels`;
+          pauseScoreText.textContent = `${formatScore(score)} PTS`;
+          pauseLivesText.textContent = '♥'.repeat(Math.max(0, lives)) || '0';
+          btnPauseOpenSlide.textContent = `📖 OPEN ${activeCp.code} SLIDE`;
+
+          pauseLevelGrid.innerHTML = '';
+          CHECKPOINTS.forEach((cp, idx) => {
+            const b = document.createElement('button');
+            const isCurr = idx === currentCheckpointIndex;
+            const isDone = completedCheckpoints.includes(idx);
+            b.className = 'font-code';
+            b.style.padding = '6px 4px';
+            b.style.fontSize = '11px';
+            b.style.cursor = 'pointer';
+            b.style.border = isCurr || isDone ? '2px solid #202124' : '2px solid #cfcfcf';
+            b.style.background = isCurr ? '#202124' : isDone ? '#f7f7f7' : '#ffffff';
+            b.style.color = isCurr ? '#f7f7f7' : '#202124';
+            b.style.fontWeight = isCurr || isDone ? '700' : '400';
+            b.textContent = (isDone ? '✓' : '') + cp.code;
+            b.onclick = () => {
+              soundEngine.playClick();
+              openCheckpointAtIndex(idx);
+            };
+            pauseLevelGrid.appendChild(b);
+          });
+        }
+
+        /* ==========================================================================
+           6. EDUCATIONAL CHECKPOINT MODAL RENDERER (ALL 12 LEVELS)
+           ========================================================================== */
+        function renderCheckpointModal() {
+          const cp = CHECKPOINTS[currentCheckpointIndex] || CHECKPOINTS[0];
+          const isLast = currentCheckpointIndex === CHECKPOINTS.length - 1;
+
+          cpModalCode.textContent = `${cp.code} (${currentCheckpointIndex + 1}/${CHECKPOINTS.length})`;
+          cpModalLevelLabel.textContent = cp.levelLabel;
+          cpModalTitle.textContent = cp.title;
+          cpModalSubtitle.textContent = cp.subtitle;
+          cpModalNextHint.textContent = isLast
+            ? 'All 12 Checkpoints Completed! Ready for the Final Boss Challenge.'
+            : `Next Up: ${CHECKPOINTS[currentCheckpointIndex + 1].code} — ${CHECKPOINTS[currentCheckpointIndex + 1].title}`;
+
+          btnCpContinue.textContent = isLast ? 'ENTER BOSS ARENA' : 'CONTINUE RUNNING';
+          btnCpNext.textContent = isLast ? 'FIGHT FINAL BOSS →' : 'NEXT CHECKPOINT →';
+
+          // Quick Nav Numbers 1..12
+          cpModalQuickNav.innerHTML = '';
+          CHECKPOINTS.forEach((item, idx) => {
+            const b = document.createElement('button');
+            b.className = 'font-code';
+            b.style.padding = '4px 8px';
+            b.style.fontSize = '11px';
+            b.style.fontWeight = '700';
+            b.style.cursor = 'pointer';
+            b.style.border = idx === currentCheckpointIndex ? '1px solid #f7f7f7' : '1px solid #535353';
+            b.style.background = idx === currentCheckpointIndex ? '#f7f7f7' : '#333438';
+            b.style.color = idx === currentCheckpointIndex ? '#202124' : '#cfcfcf';
+            b.textContent = String(idx + 1);
+            b.onclick = () => {
+              soundEngine.playClick();
+              openCheckpointAtIndex(idx);
+            };
+            cpModalQuickNav.appendChild(b);
+          });
+
+          // Render Body Content per Checkpoint
+          if (currentCheckpointIndex === 0) {
+            cpModalBody.innerHTML = `
+              <div class="grid-2" style="margin-bottom:18px;">
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;border-bottom:1px solid #535353;padding-bottom:8px;margin-bottom:10px;">
+                    01. THE UNIVERSITY PROBLEM
+                  </div>
+                  <div style="font-size:13px;line-height:1.6;">
+                    <p style="margin:0 0 8px 0;"><strong>[1] Skill-Mismatch in Teams:</strong> University students (Years 1–4) struggle to find teammates with complementary skills for course projects, hackathons, or graduation projects.</p>
+                    <p style="margin:0 0 8px 0;"><strong>[2] Chaotic Search Channels:</strong> Team formation happens randomly on WhatsApp &amp; Facebook groups without knowing real technical proficiency or student commitment.</p>
+                    <p style="margin:0;"><strong>[3] Unverified Activities:</strong> Student Activities &amp; Workshops are scattered with no unified platform converting real attendance into a <strong>Verified Skill Portfolio</strong>.</p>
+                  </div>
+                </div>
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;border-bottom:1px solid #535353;padding-bottom:8px;margin-bottom:10px;">
+                    02. THE TEAMUP SOLUTION &amp; 3 SYSTEM ROLES
+                  </div>
+                  <p style="font-size:13px;margin:0 0 10px 0;"><strong>Slogan:</strong> <em>"Build Your Skills. Find Your Team. Grow Together."</em></p>
+                  <div class="font-code" style="font-size:12px;display:flex;flex-direction:column;gap:8px;">
+                    <div style="padding:8px;background:#fff;border:1px solid #535353;"><strong>1. Student:</strong> Creates projects, applies to teams, joins clubs, books workshops, and earns verified points &amp; badges.</div>
+                    <div style="padding:8px;background:#fff;border:1px solid #535353;"><strong>2. OrgAdmin:</strong> Manages student activity pages (IEEE, GDG, Enactus, ACM), reviews join requests, creates events/sessions, and verifies attendance (QR/RFID/Manual).</div>
+                    <div style="padding:8px;background:#fff;border:1px solid #535353;"><strong>3. PlatformAdmin:</strong> Manages the university-wide Badge catalog and monitors score ledgers &amp; platform integrity.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="retro-box-sm" style="padding:16px;margin-bottom:18px;">
+                <div class="font-pixel" style="font-size:12px;margin-bottom:12px;">03. THE 5 CORE BUSINESS MODULES</div>
+                <div class="grid-5" style="font-size:12px;">
+                  <div style="padding:10px;background:#f7f7f7;border:1px solid #202124;">
+                    <div class="font-code" style="font-weight:700;margin-bottom:4px;">M1 · Team Formation</div>
+                    <div style="color:#535353;">Create projects, set <code>MaxTeamSize</code>, <code>Required Skills</code> (<code>IsMandatory</code>), <code>AppliesTo</code>, &amp; <code>Project Tasks Board</code>.</div>
+                  </div>
+                  <div style="padding:10px;background:#f7f7f7;border:1px solid #202124;">
+                    <div class="font-code" style="font-weight:700;margin-bottom:4px;">M2 · Profiles &amp; Scoring</div>
+                    <div style="color:#535353;">Academic profile (Faculty, Year, GitHub, LinkedIn), skills with <code>ProficiencyLevel</code>, &amp; verified portfolio.</div>
+                  </div>
+                  <div style="padding:10px;background:#f7f7f7;border:1px solid #202124;">
+                    <div class="font-code" style="font-weight:700;margin-bottom:4px;">M3 · Student Activities</div>
+                    <div style="color:#535353;">Campus directory for IEEE, GDG, Enactus, ACM recruitment, <code>OrgJoinRequest</code>, &amp; member rosters.</div>
+                  </div>
+                  <div style="padding:10px;background:#f7f7f7;border:1px solid #202124;">
+                    <div class="font-code" style="font-weight:700;margin-bottom:4px;">M4 · Events &amp; Workshops</div>
+                    <div style="color:#535353;">Capacity-controlled registration (<code>Capacity</code>), multi-session breakdown (<code>EventSessions</code>), &amp; attendance proof.</div>
+                  </div>
+                  <div style="padding:10px;background:#f7f7f7;border:1px solid #202124;">
+                    <div class="font-code" style="font-weight:700;margin-bottom:4px;">M5 · Gamification</div>
+                    <div style="color:#535353;">Immutable <code>ScoreTransaction</code> ledger, square-root level formula, auto-awarded <code>Badges</code>, &amp; Leaderboard.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">04. SYSTEM ARCHITECTURE: FRONTEND → BACKEND → DATABASE</div>
+                <div class="grid-3 font-code" style="text-align:center;font-size:12px;">
+                  <div style="padding:12px;background:#fff;border:2px solid #202124;"><strong>FRONTEND LAYER</strong><br/><span style="color:#535353;">Responsive Web UI · Morphing Sticky Header · 5 Modules &amp; 26 Sub-Actions</span></div>
+                  <div style="padding:12px;background:#202124;color:#f7f7f7;border:2px solid #202124;"><strong>BACKEND ENGINE</strong><br/><span style="color:#cfcfcf;">C# / ASP.NET Core (.NET 10) · 6 REST Controllers · JWT + RBAC · OpenAPI 3.0</span></div>
+                  <div style="padding:12px;background:#fff;border:2px solid #202124;"><strong>DATABASE LAYER</strong><br/><span style="color:#535353;">TeamUpDB (Chen ERD) · 13 Core Entities · Serializable Transactions</span></div>
+                </div>
+              </div>
+            `;
+          } else if (currentCheckpointIndex === 1) {
+            const stageDescs = [
+              '[STAGE 1 - USER ACTION]: Student #1084 clicks "Register Now" on IEEE Data Analysis Workshop (EventID = 42).',
+              '[STAGE 2 - FRONTEND HTTP REQUEST]: POST /api/v1/events/42/registrations | Header: Authorization: Bearer <JWT>',
+              '[STAGE 3 - CONTROLLER ROUTING]: ASP.NET Core routes request to RegistrationsController.RegisterStudent(42).',
+              '[STAGE 4 - BUSINESS LOGIC]: Verifies Event #42 is Open, Student #1084 is not duplicated, and RegisteredCount (99) < Capacity (100).',
+              '[STAGE 5 - DATABASE TRANSACTION]: Begins Serializable transaction with UPDLOCK, HOLDLOCK → Inserts EventRegistration → RegisteredCount = 100.',
+              '[STAGE 6 - JSON RESPONSE]: HTTP/1.1 201 Created — { "registrationId": 9012, "status": "Confirmed", "remainingSeats": 0 }'
+            ];
+            cpModalBody.innerHTML = `
+              <div class="grid-2" style="margin-bottom:18px;">
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">01. C# / ASP.NET CORE (.NET 10) ARCHITECTURE</div>
+                  <p style="font-size:13px;margin:0 0 10px 0;">Built using <strong>C# and ASP.NET Core (.NET 10)</strong> with full <strong>Swagger / OpenAPI 3.0</strong> documentation.</p>
+                  <div class="font-code" style="font-size:12px;display:flex;flex-direction:column;gap:8px;">
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>Controllers (API Layer):</strong> Validate routes/headers and return semantic HTTP status codes + JSON DTOs.</div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>Business Logic &amp; Services:</strong> Enforce capacity locks, duplicate checks, score ledger math, and automatic badge triggers.</div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>Data Access &amp; TeamUpDB:</strong> Executes ACID transactions against the 13 Chen ERD entities.</div>
+                  </div>
+                </div>
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">02. THE 6 RESTFUL CONTROLLERS</div>
+                  <div class="grid-2 font-code" style="font-size:11px;gap:8px;">
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>1. EventsController</strong><br/><code>/api/v1/events</code></div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>2. RegistrationsController</strong><br/><code>/api/v1/events/{id}/registrations</code></div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>3. AttendanceController</strong><br/><code>/api/v1/sessions/{id}/attendance</code></div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>4. GamificationController</strong><br/><code>/api/v1/students/{id}/score</code></div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>5. BadgesController</strong><br/><code>/api/v1/badges</code></div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>6. NotificationsController</strong><br/><code>/api/v1/notifications</code></div>
+                  </div>
+                </div>
+              </div>
+              <div class="retro-box-sm" style="padding:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                  <span class="font-pixel" style="font-size:12px;">03. INTERACTIVE REQUEST LIFECYCLE (CLICK ANY STAGE)</span>
+                  <button id="btn-step-lifecycle" class="retro-btn font-code" style="font-size:12px;padding:6px 12px;">Step Forward (${lifecycleStep + 1}/6) →</button>
+                </div>
+                <div class="grid-3 font-code" style="font-size:12px;margin-bottom:12px;">
+                  ${['1. User Action', '2. Frontend', '3. REST API', '4. Backend Logic', '5. TeamUpDB', '6. JSON Response']
+                    .map(
+                      (t, i) => `
+                    <button class="lifecycle-stage-btn" data-step="${i}" style="padding:10px;text-align:left;cursor:pointer;border:2px solid #202124;background:${
+                        lifecycleStep === i ? '#202124' : '#f7f7f7'
+                      };color:${lifecycleStep === i ? '#f7f7f7' : '#202124'};font-weight:700;">
+                      ${t}
+                    </button>`
+                    )
+                    .join('')}
+                </div>
+                <div class="font-code" style="background:#202124;color:#f7f7f7;padding:12px;font-size:12px;">
+                  ${stageDescs[lifecycleStep]}
+                </div>
+              </div>
+            `;
+            document.getElementById('btn-step-lifecycle').onclick = () => {
+              soundEngine.playClick();
+              lifecycleStep = (lifecycleStep + 1) % 6;
+              renderCheckpointModal();
+            };
+            cpModalBody.querySelectorAll('.lifecycle-stage-btn').forEach((b) => {
+              b.onclick = () => {
+                soundEngine.playClick();
+                lifecycleStep = Number(b.getAttribute('data-step'));
+                renderCheckpointModal();
+              };
+            });
+          } else if (currentCheckpointIndex === 2) {
+            const selectedEnt = ERD_ENTITIES.find((e) => e.id === selectedEntityId) || ERD_ENTITIES[2];
+            cpModalBody.innerHTML = `
+              <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:#f7f7f7;padding:12px;border:2px solid #202124;margin-bottom:16px;">
+                <div class="font-code" style="font-size:12px;">
+                  <strong>TeamUpDB (Chen ERD):</strong> 13 Core Entities + M:N Junction Tables. Click any entity below to inspect its keys &amp; relationships!
+                </div>
+                <button id="btn-toggle-erd-img" class="retro-btn font-code" style="font-size:12px;padding:6px 12px;">
+                  ${showOriginalErdImage ? '← Back to Interactive Entity Explorer' : 'View Attached Chen ERD Diagram →'}
+                </button>
+              </div>
+              ${
+                showOriginalErdImage
+                  ? `
+                <div class="retro-box-sm" style="padding:14px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">ATTACHED PROJECT CHEN ERD DIAGRAM (TeamUpDB)</div>
+                  <div style="border:2px solid #202124;background:#fff;padding:8px;max-height:52vh;overflow:auto;text-align:center;">
+                    <img src="/assets/aistudio/Screenshot_2026-10-31_232527_a830f67a.png"
+                         onerror="this.onerror=null;this.src='public/assets/aistudio/Screenshot_2026-10-31_232527_a830f67a.png';"
+                         alt="TeamUpDB Chen ERD Diagram"
+                         style="max-width:100%;height:auto;" />
+                  </div>
+                </div>`
+                  : `
+                <div class="grid-2">
+                  <div>
+                    <div class="font-pixel" style="font-size:11px;margin-bottom:10px;">SELECT AN ENTITY (13 CORE ENTITIES):</div>
+                    <div class="grid-3" style="margin-bottom:14px;">
+                      ${ERD_ENTITIES.map((ent) => {
+                        const isSel = ent.id === selectedEnt.id;
+                        return `<button class="erd-ent-btn font-code" data-id="${ent.id}" style="padding:8px;text-align:left;cursor:pointer;font-size:12px;border:2px solid #202124;background:${
+                          isSel ? '#202124' : '#ffffff'
+                        };color:${isSel ? '#f7f7f7' : '#202124'};">
+                          <strong>${ent.name}</strong><br/><span style="font-size:10px;opacity:0.8;">PK: ${ent.pk}</span>
+                        </button>`;
+                      }).join('')}
+                    </div>
+                  </div>
+                  <div class="retro-box-sm font-code" style="padding:16px;background:#f7f7f7;font-size:12px;">
+                    <div style="display:flex;justify-content:space-between;border-bottom:2px solid #202124;padding-bottom:8px;margin-bottom:10px;">
+                      <strong class="font-pixel" style="font-size:13px;">ENTITY: ${selectedEnt.name}</strong>
+                      <span style="background:#202124;color:#f7f7f7;padding:2px 8px;">PK: ${selectedEnt.pk}</span>
+                    </div>
+                    <p style="margin:0 0 10px 0;">${selectedEnt.description}</p>
+                    <div style="margin-bottom:10px;">
+                      <strong>ATTRIBUTES &amp; KEYS:</strong>
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+                        ${selectedEnt.attributes
+                          .map((a) => `<span style="background:#fff;border:1px solid #202124;padding:2px 6px;font-size:11px;">${a}</span>`)
+                          .join('')}
+                      </div>
+                    </div>
+                    ${
+                      selectedEnt.junctionTables.length
+                        ? `<div style="margin-bottom:10px;">
+                            <strong>JUNCTION TABLES:</strong>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+                              ${selectedEnt.junctionTables
+                                .map((jt) => `<span style="background:#202124;color:#f7f7f7;padding:2px 6px;font-size:11px;">${jt}</span>`)
+                                .join('')}
+                            </div>
+                          </div>`
+                        : ''
+                    }
+                    <div>
+                      <strong>RELATIONSHIPS:</strong>
+                      <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
+                        ${selectedEnt.relationships
+                          .map(
+                            (r) =>
+                              `<div style="background:#fff;border:1px solid #535353;padding:6px;"><strong>${selectedEnt.name}</strong> ──[${r.cardinality}]──&gt; <strong>${r.target}</strong>${
+                                r.via ? ' via ' + r.via : ''
+                              }</div>`
+                          )
+                          .join('')}
+                      </div>
+                    </div>
+                  </div>
+                </div>`
+              }
+            `;
+            document.getElementById('btn-toggle-erd-img').onclick = () => {
+              soundEngine.playClick();
+              showOriginalErdImage = !showOriginalErdImage;
+              renderCheckpointModal();
+            };
+            cpModalBody.querySelectorAll('.erd-ent-btn').forEach((b) => {
+              b.onclick = () => {
+                soundEngine.playClick();
+                selectedEntityId = b.getAttribute('data-id');
+                renderCheckpointModal();
+              };
+            });
+          } else if (currentCheckpointIndex === 3) {
+            const ep = API_ENDPOINTS[selectedEndpointIdx];
+            const sc = STATUS_CODES[selectedStatusIdx];
+            cpModalBody.innerHTML = `
+              <div class="grid-5 font-code" style="font-size:12px;margin-bottom:16px;">
+                <div style="padding:10px;background:#f7f7f7;border:2px solid #202124;"><strong>GET</strong><br/>Retrieve Data</div>
+                <div style="padding:10px;background:#f7f7f7;border:2px solid #202124;"><strong>POST</strong><br/>Create Resource</div>
+                <div style="padding:10px;background:#f7f7f7;border:2px solid #202124;"><strong>PUT</strong><br/>Replace/Update</div>
+                <div style="padding:10px;background:#f7f7f7;border:2px solid #202124;"><strong>PATCH</strong><br/>Partial Update</div>
+                <div style="padding:10px;background:#f7f7f7;border:2px solid #202124;"><strong>DELETE</strong><br/>Delete/Cancel</div>
+              </div>
+              <div class="grid-2" style="margin-bottom:16px;">
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <div class="font-pixel" style="font-size:11px;margin-bottom:4px;">TEAMUP ENDPOINTS (CLICK TO INSPECT):</div>
+                  ${API_ENDPOINTS.map(
+                    (item, idx) => `
+                    <button class="ep-btn font-code" data-idx="${idx}" style="padding:8px 10px;text-align:left;cursor:pointer;font-size:12px;border:2px solid #202124;background:${
+                      selectedEndpointIdx === idx ? '#202124' : '#f7f7f7'
+                    };color:${selectedEndpointIdx === idx ? '#f7f7f7' : '#202124'};">
+                      <strong>${item.method}</strong> ${item.route} [${item.responseStatus}]
+                    </button>`
+                  ).join('')}
+                </div>
+                <div class="retro-box-sm font-code" style="padding:14px;background:#202124;color:#f7f7f7;font-size:12px;">
+                  <div style="border-bottom:1px solid #535353;padding-bottom:8px;margin-bottom:8px;">
+                    <span style="background:#f7f7f7;color:#202124;padding:2px 6px;font-weight:700;">${ep.method}</span>
+                    <strong> ${ep.route}</strong> · <span style="color:#cfcfcf;">${ep.controller}</span>
+                  </div>
+                  <p style="margin:0 0 8px 0;color:#e0e0e0;">${ep.summary}</p>
+                  ${
+                    ep.requestBody
+                      ? `<div style="margin-bottom:8px;"><div style="color:#cfcfcf;margin-bottom:4px;">REQUEST BODY:</div><pre style="background:#141518;padding:8px;border:1px solid #535353;">${ep.requestBody}</pre></div>`
+                      : ''
+                  }
+                  <div><div style="color:#cfcfcf;margin-bottom:4px;">RESPONSE (${ep.responseStatus}):</div><pre style="background:#141518;padding:8px;border:1px solid #535353;">${ep.responseBody}</pre></div>
+                </div>
+              </div>
+              <div class="retro-box-sm font-code" style="padding:14px;background:#f7f7f7;font-size:12px;">
+                <div class="font-pixel" style="font-size:11px;margin-bottom:8px;">HTTP STATUS CODES IN TEAMUP:</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+                  ${STATUS_CODES.map(
+                    (s, idx) => `
+                    <button class="sc-btn font-code" data-idx="${idx}" style="padding:6px 10px;cursor:pointer;font-weight:700;border:2px solid #202124;background:${
+                      selectedStatusIdx === idx ? '#202124' : '#ffffff'
+                    };color:${selectedStatusIdx === idx ? '#f7f7f7' : '#202124'};">${s.code}</button>`
+                  ).join('')}
+                </div>
+                <div style="background:#fff;border:2px solid #202124;padding:10px;">
+                  <strong>${sc.name} (${sc.cat}):</strong> ${sc.desc}
+                </div>
+              </div>
+            `;
+            cpModalBody.querySelectorAll('.ep-btn').forEach((b) => {
+              b.onclick = () => {
+                soundEngine.playClick();
+                selectedEndpointIdx = Number(b.getAttribute('data-idx'));
+                renderCheckpointModal();
+              };
+            });
+            cpModalBody.querySelectorAll('.sc-btn').forEach((b) => {
+              b.onclick = () => {
+                soundEngine.playClick();
+                selectedStatusIdx = Number(b.getAttribute('data-idx'));
+                renderCheckpointModal();
+              };
+            });
+          } else if (currentCheckpointIndex === 4) {
+            cpModalBody.innerHTML = `
+              <div class="grid-2">
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">01. EVENTS &amp; WORKSHOPS ARCHITECTURE</div>
+                  <p style="font-size:13px;margin:0 0 10px 0;">Managed by <code>EventsController</code> (<code>/api/v1/events</code>). Campus organizations (<strong>IEEE, GDG, Enactus, ACM</strong>) create workshops with strict seat <code>Capacity</code>.</p>
+                  <div class="font-code" style="font-size:12px;display:flex;flex-direction:column;gap:8px;">
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>Organizer Permissions (RBAC):</strong> Only <code>OrgAdmin</code> or <code>PlatformAdmin</code> can create, update, or delete events.</div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>1:N Event → EventSession Relationship:</strong> A parent <code>Event</code> contains multiple scheduled <code>EventSession</code> records.</div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;"><strong>Capacity Tracking:</strong> Each <code>Event</code> defines <code>Capacity</code> (e.g., 100 seats) and tracks live <code>RegisteredCount</code>.</div>
+                  </div>
+                </div>
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span class="font-pixel" style="font-size:11px;">02. DATA ANALYSIS WORKSHOP (1:N SESSIONS)</span>
+                    <button id="btn-add-session" class="retro-btn font-code" style="font-size:11px;padding:5px 10px;">+ Add EventSession</button>
+                  </div>
+                  <div class="font-code" style="background:#202124;color:#f7f7f7;padding:10px;font-size:12px;margin-bottom:10px;">
+                    <strong>PARENT EVENT (EventID: 42):</strong> IEEE Data Analysis Workshop · Capacity: 100 Seats
+                  </div>
+                  <div class="font-code" style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
+                    ${workshopSessions
+                      .map(
+                        (s) => `
+                      <div style="padding:8px;background:#fff;border:2px solid #202124;display:flex;justify-content:space-between;">
+                        <span><strong>[SessionID #${s.id}]</strong> ${s.title}</span>
+                        <span style="color:#535353;">${s.room} · ${s.time}</span>
+                      </div>`
+                      )
+                      .join('')}
+                  </div>
+                </div>
+              </div>
+            `;
+            document.getElementById('btn-add-session').onclick = () => {
+              soundEngine.playClick();
+              const nextNum = workshopSessions.length + 1;
+              workshopSessions.push({
+                id: 100 + nextNum,
+                title: `Session ${nextNum}: Practical Capstone Lab`,
+                room: `Lab ${nextNum + 1}`,
+                time: '16:00 - 18:00'
+              });
+              renderCheckpointModal();
+            };
+          } else if (currentCheckpointIndex === 5) {
+            cpModalBody.innerHTML = `
+              <div class="grid-2">
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">01. CONCURRENCY &amp; ANTI-OVERBOOKING ENGINE</div>
+                  <p style="font-size:13px;margin:0 0 10px 0;"><strong>The Race Condition Problem:</strong> If <code>Capacity = 100</code> and <code>RegisteredCount = 99</code> (1 seat left), what if Student A and Student B click Register at the exact same millisecond?</p>
+                  <pre class="font-code" style="background:#202124;color:#f7f7f7;padding:12px;font-size:11px;line-height:1.45;">// RegistrationsController.cs - C# .NET 10 Anti-Overbooking Logic
+using var tx = await _db.Database.BeginTransactionAsync(
+    IsolationLevel.Serializable);
+
+var ev = await _db.Events
+    .FromSqlRaw("SELECT * FROM Events WITH (UPDLOCK, HOLDLOCK) WHERE EventID = {0}", eventId)
+    .FirstOrDefaultAsync();
+
+if (ev.RegisteredCount >= ev.Capacity) {
+    return Conflict(new { error = "409 Conflict: Event capacity is full" });
+}
+
+ev.RegisteredCount += 1;
+_db.EventRegistrations.Add(new EventRegistration(eventId, studentId));
+await _db.SaveChangesAsync();
+await tx.CommitAsync(); // Returns 201 Created</pre>
+                </div>
+                <div class="retro-box-sm font-code" style="padding:16px;background:#f7f7f7;font-size:12px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span class="font-pixel" style="font-size:11px;">02. SIMULATE LAST-SEAT RACE CONDITION</span>
+                    <button id="btn-sim-race" class="retro-btn font-code" style="font-size:11px;padding:6px 12px;">
+                      ${raceSimulated ? 'Reset To 99/100 Seats' : 'Fire Simultaneous Requests!'}
+                    </button>
+                  </div>
+                  <div style="padding:10px;background:#fff;border:2px solid #202124;margin-bottom:10px;display:flex;justify-content:space-between;">
+                    <span>WORKSHOP CAPACITY STATUS:</span>
+                    <strong class="font-pixel" style="font-size:11px;">${raceSimulated ? '100 / 100 (FULL)' : '99 / 100 (1 SEAT LEFT)'}</strong>
+                  </div>
+                  <div style="padding:10px;background:#fff;border:2px solid #202124;margin-bottom:10px;">
+                    <strong>Request #1: Student A (t = 0.001s)</strong>
+                    <div style="color:#535353;margin-top:4px;">${
+                      raceSimulated
+                        ? '→ Acquires UPDLOCK, HOLDLOCK first. Reads 99 < 100. Increments to 100. Returns HTTP 201 Created!'
+                        : 'Waiting to send POST /api/v1/events/42/registrations...'
+                    }</div>
+                  </div>
+                  <div style="padding:10px;background:#fff;border:2px solid #202124;">
+                    <strong>Request #2: Student B (t = 0.001s)</strong>
+                    <div style="color:#535353;margin-top:4px;">${
+                      raceSimulated
+                        ? '→ Blocked by HOLDLOCK until Tx #1 commits. Reads RegisteredCount = 100. Returns HTTP 409 Conflict (Event capacity is full)!'
+                        : 'Waiting to send POST /api/v1/events/42/registrations...'
+                    }</div>
+                  </div>
+                </div>
+              </div>
+            `;
+            document.getElementById('btn-sim-race').onclick = () => {
+              soundEngine.playCheckpoint();
+              raceSimulated = !raceSimulated;
+              renderCheckpointModal();
+            };
+          } else if (currentCheckpointIndex === 6) {
+            cpModalBody.innerHTML = `
+              <div class="grid-2">
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">01. MULTI-METHOD ATTENDANCE VERIFICATION</div>
+                  <p style="font-size:13px;margin:0 0 10px 0;">Registering (<code>EventRegistration</code>) only reserves a seat. Points are awarded only when <code>AttendanceController</code> (<code>/api/v1/sessions/{id}/attendance</code>) verifies physical session presence!</p>
+                  <div class="grid-3 font-code" style="margin-bottom:10px;">
+                    ${['QRCode', 'RFID', 'Manual']
+                      .map(
+                        (m) => `
+                      <button class="att-method-btn font-code" data-m="${m}" style="padding:8px;cursor:pointer;font-weight:700;border:2px solid #202124;background:${
+                          attendanceMethod === m ? '#202124' : '#ffffff'
+                        };color:${attendanceMethod === m ? '#f7f7f7' : '#202124'};">${m}</button>`
+                      )
+                      .join('')}
+                  </div>
+                  <div class="font-code" style="padding:10px;background:#fff;border:2px solid #202124;font-size:12px;">
+                    <strong>Active Method: ${attendanceMethod}</strong> — Verified by OrgAdmin / Session Reader.
+                  </div>
+                </div>
+                <div class="retro-box-sm font-code" style="padding:16px;background:#f7f7f7;font-size:12px;">
+                  <div class="font-pixel" style="font-size:11px;margin-bottom:10px;">02. ANTI-DUPLICATE: UNIQUE (SessionID, StudentID)</div>
+                  <p style="margin:0 0 10px 0;color:#535353;">Click once to verify attendance (+100 pts), then click again to test duplicate prevention:</p>
+                  <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <button id="btn-checkin-test" class="retro-btn font-code" style="font-size:12px;padding:8px 14px;">
+                      ${checkedInCount === 0 ? 'Check-In Student #1084 (' + attendanceMethod + ')' : 'Attempt Duplicate Check-In Again!'}
+                    </button>
+                    <button id="btn-checkin-reset" class="retro-btn-secondary font-code" style="font-size:12px;padding:8px 12px;">Reset</button>
+                  </div>
+                  <div style="background:#202124;color:#f7f7f7;padding:12px;">
+                    ${
+                      checkedInCount === 0
+                        ? '[READY]: Waiting for POST /api/v1/sessions/105/attendance...'
+                        : checkedInCount === 1
+                        ? `[HTTP 201 CREATED]: SessionAttendance recorded (${attendanceMethod}). Triggered ScoreTransaction (+100 pts)!`
+                        : '[HTTP 409 CONFLICT]: Blocked by UNIQUE (SessionID=105, StudentID=1084) constraint! Duplicate check-in prevented.'
+                    }
+                  </div>
+                </div>
+              </div>
+            `;
+            cpModalBody.querySelectorAll('.att-method-btn').forEach((b) => {
+              b.onclick = () => {
+                soundEngine.playClick();
+                attendanceMethod = b.getAttribute('data-m');
+                checkedInCount = 0;
+                renderCheckpointModal();
+              };
+            });
+            document.getElementById('btn-checkin-test').onclick = () => {
+              if (checkedInCount === 0) soundEngine.playCheckpoint();
+              else soundEngine.playBossAttack();
+              checkedInCount++;
+              renderCheckpointModal();
+            };
+            document.getElementById('btn-checkin-reset').onclick = () => {
+              soundEngine.playClick();
+              checkedInCount = 0;
+              renderCheckpointModal();
+            };
+          } else if (currentCheckpointIndex === 7) {
+            const totalPts = ledgerTransactions.reduce((acc, t) => acc + t.points, 0);
+            const calcLevel = Math.floor(Math.sqrt(totalPts / 100)) + 1;
+            cpModalBody.innerHTML = `
+              <div class="grid-2">
+                <div class="retro-box-sm font-code" style="padding:16px;background:#f7f7f7;font-size:12px;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">01. DYNAMIC LEVEL FORMULA</div>
+                  <div style="background:#202124;color:#f7f7f7;padding:10px;text-align:center;margin-bottom:10px;font-weight:700;">
+                    CurrentLevel = FLOOR(SQRT(TotalPoints / 100)) + 1
+                  </div>
+                  <div style="background:#fff;border:2px solid #202124;padding:10px;margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>LIVE TOTAL POINTS:</span><strong class="font-pixel">${totalPts} PTS</strong></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>CALCULATION:</span><span>floor(√(${totalPts}/100)) + 1</span></div>
+                    <div style="display:flex;justify-content:space-between;border-top:1px solid #535353;padding-top:6px;"><span>STUDENT LEVEL:</span><strong class="font-pixel" style="background:#202124;color:#f7f7f7;padding:2px 8px;">LEVEL ${calcLevel}</strong></div>
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button id="btn-add-att-pts" class="retro-btn font-code" style="font-size:11px;padding:8px 12px;">+100 pts (Attend Workshop)</button>
+                    <button id="btn-add-task-pts" class="retro-btn-secondary font-code" style="font-size:11px;padding:8px 12px;">+100 pts (Complete Task)</button>
+                  </div>
+                </div>
+                <div class="retro-box-sm font-code" style="padding:16px;background:#f7f7f7;font-size:12px;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">02. IMMUTABLE SCORE LEDGER (ScoreTransaction)</div>
+                  <div style="background:#fff;border:2px solid #202124;max-height:220px;overflow-y:auto;">
+                    <table>
+                      <thead style="background:#202124;color:#f7f7f7;">
+                        <tr><th>TxID</th><th>Points</th><th>Reason</th><th>SourceType</th></tr>
+                      </thead>
+                      <tbody>
+                        ${ledgerTransactions
+                          .map(
+                            (tx) =>
+                              `<tr><td>#${tx.id}</td><td><strong>+${tx.points}</strong></td><td>${tx.reason}</td><td>${tx.source}</td></tr>`
+                          )
+                          .join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            `;
+            document.getElementById('btn-add-att-pts').onclick = () => {
+              soundEngine.playCheckpoint();
+              ledgerTransactions.push({
+                id: ledgerTransactions.length + 1,
+                points: 100,
+                reason: 'Verified Session Attendance (+100)',
+                source: 'SessionAttendance',
+                time: 'Now'
+              });
+              renderCheckpointModal();
+            };
+            document.getElementById('btn-add-task-pts').onclick = () => {
+              soundEngine.playCheckpoint();
+              ledgerTransactions.push({
+                id: ledgerTransactions.length + 1,
+                points: 100,
+                reason: 'Completed Project Task (+100)',
+                source: 'ProjectTask',
+                time: 'Now'
+              });
+              renderCheckpointModal();
+            };
+          } else if (currentCheckpointIndex === 8) {
+            cpModalBody.innerHTML = `
+              <div class="grid-2">
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">01. AUTOMATED BADGE ENGINE (BadgesController)</div>
+                  <p style="font-size:13px;margin:0 0 10px 0;">Managed by <code>PlatformAdmin</code> via <code>/api/v1/badges</code>. Whenever points are added, the Backend checks <code>CriteriaType</code> and <code>CriteriaValue</code> and automatically inserts <code>StudentBadge</code>.</p>
+                  <button id="btn-unlock-badge-demo" class="retro-btn font-pixel" style="font-size:11px;padding:10px 16px;">★ Trigger Retro Achievement Unlock</button>
+                </div>
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;display:flex;align-items:center;justify-content:center;text-align:center;">
+                  ${
+                    badgeUnlockedDemo
+                      ? `<div style="background:#202124;color:#f7f7f7;padding:20px;width:100%;border:4px solid #535353;">
+                          <div class="font-pixel" style="font-size:11px;color:#cfcfcf;margin-bottom:8px;">★ ACHIEVEMENT UNLOCKED! ★</div>
+                          <div class="font-pixel" style="font-size:15px;margin-bottom:8px;">[BADGE #03: WORKSHOP PIONEER]</div>
+                          <div class="font-code" style="font-size:12px;color:#e0e0e0;">Condition Met: TotalPoints &gt;= 300 → Inserted into StudentBadge &amp; Notification sent!</div>
+                        </div>`
+                      : `<div class="font-code" style="padding:20px;background:#fff;border:2px solid #202124;width:100%;font-size:12px;">
+                          <strong>BADGE CATALOG THRESHOLDS:</strong><br/><br/>
+                          [FIRST STEP: 100+ PTS] · [WORKSHOP PIONEER: 300+ PTS] · [TEAM LEADER: PROJECT CREATED]
+                        </div>`
+                  }
+                </div>
+              </div>
+            `;
+            document.getElementById('btn-unlock-badge-demo').onclick = () => {
+              soundEngine.playAchievement();
+              badgeUnlockedDemo = true;
+              renderCheckpointModal();
+            };
+          } else if (currentCheckpointIndex === 9) {
+            const unreadCount = notificationsList.filter((n) => !n.isRead).length;
+            cpModalBody.innerHTML = `
+              <div class="grid-2">
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">01. NOTIFICATION SYSTEM &amp; OWNER ACCESS</div>
+                  <p style="font-size:13px;margin:0 0 10px 0;"><code>NotificationsController</code> (<code>/api/v1/notifications</code>) manages the student inbox, read states (<code>IsRead</code>), and bulk <code>PATCH /mark-all-read</code> with strict Owner-Based Access Control.</p>
+                </div>
+                <div class="retro-box-sm font-code" style="padding:16px;background:#f7f7f7;font-size:12px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <strong class="font-pixel" style="font-size:11px;">02. STUDENT INBOX (Unread: ${unreadCount})</strong>
+                    <button id="btn-mark-all-read" class="retro-btn font-code" style="font-size:11px;padding:5px 10px;">PATCH /mark-all-read</button>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    ${notificationsList
+                      .map(
+                        (n) => `
+                      <div style="padding:10px;border:2px solid #202124;background:${n.isRead ? '#ffffff' : '#202124'};color:${
+                          n.isRead ? '#535353' : '#f7f7f7'
+                        };display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                        <div>
+                          <strong>${n.isRead ? '[READ]' : '[UNREAD]'} ${n.title}</strong><br/>
+                          <span>${n.message}</span>
+                        </div>
+                        <button class="del-notif-btn font-code" data-id="${n.id}" style="padding:4px 8px;cursor:pointer;border:1px solid currentColor;background:transparent;color:inherit;">DELETE</button>
+                      </div>`
+                      )
+                      .join('')}
+                  </div>
+                </div>
+              </div>
+            `;
+            document.getElementById('btn-mark-all-read').onclick = () => {
+              soundEngine.playClick();
+              notificationsList = notificationsList.map((n) => ({ ...n, isRead: true }));
+              renderCheckpointModal();
+            };
+            cpModalBody.querySelectorAll('.del-notif-btn').forEach((b) => {
+              b.onclick = () => {
+                soundEngine.playClick();
+                const id = Number(b.getAttribute('data-id'));
+                notificationsList = notificationsList.filter((n) => n.id !== id);
+                renderCheckpointModal();
+              };
+            });
+          } else if (currentCheckpointIndex === 10) {
+            cpModalBody.innerHTML = `
+              <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                  <span class="font-pixel" style="font-size:12px;">01. INTERCONNECTED 6-STEP BACKEND WORKFLOW</span>
+                  <button id="btn-cascade-step" class="retro-btn font-code" style="font-size:11px;padding:5px 10px;">Animate Cascade Step →</button>
+                </div>
+                <div class="grid-3 font-code" style="font-size:12px;">
+                  ${[
+                    '1. Event Creation (OrgAdmin)',
+                    '2. Student Registration (Serializable Lock)',
+                    '3. Session Attendance (QR/RFID)',
+                    '4. Score Transaction (+100 pts)',
+                    '5. Badge Unlock (Criteria Met)',
+                    '6. Notification Delivery (Inbox)'
+                  ]
+                    .map(
+                      (s, idx) => `
+                    <div style="padding:10px;border:2px solid #202124;background:${
+                        idx <= cascadeStep ? '#202124' : '#ffffff'
+                      };color:${idx <= cascadeStep ? '#f7f7f7' : '#535353'};font-weight:700;">${s}</div>`
+                    )
+                    .join('')}
+                </div>
+              </div>
+              <div class="grid-2 font-code" style="font-size:12px;">
+                <div class="retro-box-sm" style="padding:14px;background:#f7f7f7;">
+                  <strong class="font-pixel" style="font-size:11px;display:block;margin-bottom:8px;">02. FRONTEND INTERACTIVE ARCHITECTURE</strong>
+                  <p style="margin:0 0 6px 0;">• <strong>Morphing Sticky Header &amp; Liquid Gliding Pill:</strong> Transforms on scroll (<code>scrollY &gt; 90px</code>) with coordinate-driven gliding pill across the 5 modules &amp; 26 sub-actions.</p>
+                  <p style="margin:0 0 6px 0;">• <strong>Persistent Email Auth:</strong> University login with <code>+100 pts</code> welcome reward.</p>
+                  <p style="margin:0;">• <strong>Typewriter Search &amp; Mouse Spotlight:</strong> Live filter chips, spotlight glow, &amp; Footer Letter Burst.</p>
+                </div>
+                <div class="retro-box-sm" style="padding:14px;background:#f7f7f7;">
+                  <strong class="font-pixel" style="font-size:11px;display:block;margin-bottom:8px;">03. FULL-STACK ALIGNMENT &amp; ROADMAP</strong>
+                  <p style="margin:0 0 6px 0;">• <strong>100% Schema-to-UI Parity:</strong> All 5 main navigation modules and 26 sub-options map directly to the 13 Chen ERD tables and .NET 10 endpoints.</p>
+                  <p style="margin:0;">• <strong>Next Phase Roadmap:</strong> Completing live sub-screen bindings for Kanban tasks, hardware QR scanning, and real-time campus leaderboards.</p>
+                </div>
+              </div>
+            `;
+            document.getElementById('btn-cascade-step').onclick = () => {
+              soundEngine.playCheckpoint();
+              cascadeStep = (cascadeStep + 1) % 6;
+              renderCheckpointModal();
+            };
+          } else if (currentCheckpointIndex === 11) {
+            cpModalBody.innerHTML = `
+              <div class="grid-2 font-code" style="font-size:12px;">
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">01. AUTHENTICATION VS. AUTHORIZATION</div>
+                  <div style="padding:10px;background:#202124;color:#f7f7f7;margin-bottom:8px;">
+                    <strong>AUTHENTICATION ("Who are you?"):</strong> Verified via university credentials, <code>PasswordHash</code>, and signed <strong>JWT Bearer Tokens</strong> (<code>[Authorize]</code>).
+                  </div>
+                  <div style="padding:10px;background:#fff;border:2px solid #202124;">
+                    <strong>AUTHORIZATION ("What are you allowed to do?"):</strong> Enforced via <strong>RBAC Roles</strong> (<code>Student</code>, <code>OrgAdmin</code>, <code>PlatformAdmin</code>) and ownership validation.
+                  </div>
+                </div>
+                <div class="retro-box-sm" style="padding:16px;background:#f7f7f7;">
+                  <div class="font-pixel" style="font-size:12px;margin-bottom:10px;">02. INTERACTIVE RBAC PERMISSION SIMULATOR</div>
+                  <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    ${['Student', 'OrgAdmin', 'PlatformAdmin']
+                      .map(
+                        (r) => `
+                      <button class="role-btn font-code" data-r="${r}" style="padding:6px 10px;cursor:pointer;font-weight:700;border:2px solid #202124;background:${
+                          activeRole === r ? '#202124' : '#ffffff'
+                        };color:${activeRole === r ? '#f7f7f7' : '#202124'};">Role: ${r}</button>`
+                      )
+                      .join('')}
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;display:flex;justify-content:space-between;">
+                      <span>POST /api/v1/events/{id}/registrations</span>
+                      <strong style="background:#202124;color:#f7f7f7;padding:2px 6px;">ALLOWED</strong>
+                    </div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;display:flex;justify-content:space-between;">
+                      <span>POST /api/v1/events &amp; /attendance</span>
+                      <strong style="background:${activeRole !== 'Student' ? '#202124' : '#e0e0e0'};color:${
+              activeRole !== 'Student' ? '#f7f7f7' : '#535353'
+            };padding:2px 6px;">${activeRole !== 'Student' ? 'ALLOWED' : '403 FORBIDDEN'}</strong>
+                    </div>
+                    <div style="padding:8px;background:#fff;border:1px solid #202124;display:flex;justify-content:space-between;">
+                      <span>POST /api/v1/badges (Badge Catalog)</span>
+                      <strong style="background:${activeRole === 'PlatformAdmin' ? '#202124' : '#e0e0e0'};color:${
+              activeRole === 'PlatformAdmin' ? '#f7f7f7' : '#535353'
+            };padding:2px 6px;">${activeRole === 'PlatformAdmin' ? 'ALLOWED' : '403 FORBIDDEN'}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+            cpModalBody.querySelectorAll('.role-btn').forEach((b) => {
+              b.onclick = () => {
+                soundEngine.playClick();
+                activeRole = b.getAttribute('data-r');
+                renderCheckpointModal();
+              };
+            });
+          }
+        }
+
+        /* ==========================================================================
+           7. FINAL BOSS TOP QUIZ & VICTORY / GAME OVER RENDERER
+           ========================================================================== */
+        function renderBossPanel() {
+          if (gameMode === 'VICTORY' || gameMode === 'GAME_OVER') {
+            const isWin = gameMode === 'VICTORY';
+            const correctCount = quizHistory.filter((h) => h.correct).length;
+            bossPanelBox.innerHTML = `
+              <div style="background:#202124;color:#f7f7f7;padding:12px 18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
+                <span class="font-pixel" style="font-size:12px;">
+                  ${isWin ? '★ VICTORY! YOU DEFEATED THE BACKEND BOSS! ★' : '× GAME OVER – TRAIN YOUR BACKEND KNOWLEDGE! ×'}
+                </span>
+                <span class="font-pixel" style="font-size:11px;background:#f7f7f7;color:#202124;padding:4px 10px;">
+                  FINAL SCORE: ${quizScore} / 100
+                </span>
+              </div>
+              <div style="padding:16px 20px;">
+                <div class="retro-box-sm" style="padding:14px;background:#f7f7f7;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+                  <div style="flex:1;min-width:240px;">
+                    <div class="font-pixel" style="font-size:12px;color:#202124;margin-bottom:6px;">
+                      ${
+                        isWin
+                          ? 'ACHIEVEMENT UNLOCKED: TEAMUP BACKEND ARCHITECT (FIREWORKS ACTIVE BELOW!)'
+                          : 'SCORE BELOW 70/100 THRESHOLD – THE BOSS SURVIVED!'
+                      }
+                    </div>
+                    <p class="font-code" style="font-size:12px;color:#535353;margin:0;">
+                      ${
+                        isWin
+                          ? 'Celebratory Victory Music & Black-and-White Pixel Fireworks are live! You mastered TeamUp’s C# .NET 10 Architecture, Chen ERD, Concurrency, and Gamification.'
+                          : 'Somber Defeat Music is playing. Score 70/100 or higher to defeat the Boss. Review the breakdown or retry now!'
+                      }
+                    </p>
+                  </div>
+                  <button id="btn-toggle-breakdown" class="retro-btn-secondary font-code" style="font-size:11px;padding:8px 12px;font-weight:700;">
+                    ${showFullBreakdown ? '▲ Hide 10-Question Breakdown' : `▼ Show Breakdown (${correctCount}/10 Correct)`}
+                  </button>
+                </div>
+                ${
+                  showFullBreakdown
+                    ? `<div class="font-code" style="display:flex;flex-direction:column;gap:6px;max-height:18vh;overflow-y:auto;margin-bottom:12px;font-size:11px;">
+                        ${BOSS_QUIZ_QUESTIONS.map((q, idx) => {
+                          const entry = quizHistory.find((h) => h.qIdx === idx);
+                          const ok = entry && entry.correct;
+                          return `<div style="padding:8px;background:#f7f7f7;border:1px solid #202124;">
+                            <strong>Q${idx + 1}: ${q.question}</strong> — <span style="font-weight:700;">${ok ? '+10 PTS CORRECT' : '0 PTS INCORRECT'}</span><br/>
+                            <span style="color:#535353;">Correct: ${q.options[q.correctIndex]}</span>
+                          </div>`;
+                        }).join('')}
+                      </div>`
+                    : ''
+                }
+                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;">
+                  <button id="btn-boss-restart-all" class="retro-btn-secondary font-pixel" style="font-size:11px;padding:10px 16px;">↺ RESTART FULL RUNNER</button>
+                  <button id="btn-boss-retry-quiz" class="retro-btn font-pixel" style="font-size:11px;padding:10px 18px;">⚔ RETRY BOSS CHALLENGE</button>
+                </div>
+              </div>
+            `;
+            document.getElementById('btn-toggle-breakdown').onclick = () => {
+              soundEngine.playClick();
+              showFullBreakdown = !showFullBreakdown;
+              renderBossPanel();
+            };
+            document.getElementById('btn-boss-restart-all').onclick = () => startNewRun();
+            document.getElementById('btn-boss-retry-quiz').onclick = () => startBossBattle();
+            return;
+          }
+
+          const q = BOSS_QUIZ_QUESTIONS[currentQuestionIdx];
+          bossPanelBox.innerHTML = `
+            <div style="background:#202124;color:#f7f7f7;padding:8px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="font-pixel" style="font-size:10px;background:#f7f7f7;color:#202124;padding:3px 8px;">FINAL BOSS – BACKEND CHALLENGE</span>
+                <span class="font-code" style="font-size:11px;color:#cfcfcf;">Watch Rex &amp; the Boss battle live below as you answer!</span>
+              </div>
+              <div class="font-pixel" style="font-size:10px;">
+                Q ${currentQuestionIdx + 1}/10 · SCORE: ${quizScore}/100 · BOSS HP: ${bossHp}% · LIVES: ${'♥'.repeat(Math.max(0, lives))}
+              </div>
+            </div>
+            <div style="padding:14px 18px;background:#f7f7f7;">
+              <div class="font-code" style="font-size:11px;color:#535353;display:flex;justify-content:space-between;margin-bottom:6px;">
+                <span>TOPIC: ${q.topic}</span>
+                <span>+10 PTS DIRECT HIT · 70/100 TO WIN</span>
+              </div>
+              <div class="font-pixel" style="font-size:12px;color:#202124;line-height:1.5;margin-bottom:10px;">
+                ${q.question}
+              </div>
+              <div class="grid-2" style="gap:8px;">
+                ${q.options
+                  .map((opt, idx) => {
+                    let bg = '#ffffff';
+                    let col = '#202124';
+                    let dec = 'none';
+                    if (selectedOption !== null) {
+                      if (idx === q.correctIndex) {
+                        bg = '#202124';
+                        col = '#f7f7f7';
+                      } else if (idx === selectedOption) {
+                        bg = '#e0e0e0';
+                        col = '#535353';
+                        dec = 'line-through';
+                      } else {
+                        col = '#757575';
+                      }
+                    }
+                    return `<button class="quiz-opt-btn font-code" data-idx="${idx}" ${
+                      selectedOption !== null ? 'disabled' : ''
+                    } style="padding:9px 12px;text-align:left;font-size:12px;border:2px solid #202124;background:${bg};color:${col};text-decoration:${dec};cursor:${
+                      selectedOption === null ? 'pointer' : 'default'
+                    };display:flex;gap:8px;align-items:flex-start;">
+                      <strong class="font-pixel" style="font-size:10px;">[${String.fromCharCode(65 + idx)}]</strong>
+                      <span>${opt}</span>
+                    </button>`;
+                  })
+                  .join('')}
+              </div>
+              ${
+                selectedOption !== null
+                  ? `<div style="margin-top:10px;padding:10px;background:#fff;border:2px solid #202124;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;">
+                      <div class="font-code" style="font-size:11px;flex:1;min-width:240px;">
+                        <strong style="color:#202124;">${
+                          selectedOption === q.correctIndex
+                            ? '★ DIRECT HIT! REX FIRED A LASER BEAM (-10 BOSS HP)!'
+                            : '× BOSS STOMP ATTACK! YOU LOST 1 HEART — BACKEND RULE:'
+                        }</strong><br/>
+                        <span style="color:#535353;">${q.explanation}</span>
+                      </div>
+                      <button id="btn-quiz-next" class="retro-btn font-pixel" style="font-size:10px;padding:9px 14px;">
+                        ${currentQuestionIdx + 1 < BOSS_QUIZ_QUESTIONS.length ? 'NEXT QUESTION →' : 'FINISH BATTLE →'}
+                      </button>
+                    </div>`
+                  : ''
+              }
+            </div>
+          `;
+
+          bossPanelBox.querySelectorAll('.quiz-opt-btn').forEach((b) => {
+            b.onclick = () => {
+              if (selectedOption !== null) return;
+              const chosen = Number(b.getAttribute('data-idx'));
+              selectedOption = chosen;
+              const isCorrect = chosen === q.correctIndex;
+              quizHistory.push({ qIdx: currentQuestionIdx, chosen, correct: isCorrect });
+              if (isCorrect) {
+                quizScore += 10;
+                score += 100;
+                bossHp = Math.max(0, bossHp - 10);
+                soundEngine.playPlayerAttack();
+                triggerBossVisualEffect('player_attack');
+              } else {
+                lives = Math.max(0, lives - 1);
+                soundEngine.playBossAttack();
+                triggerBossVisualEffect('boss_attack');
+              }
+              syncUI();
+            };
+          });
+
+          const btnNextQ = document.getElementById('btn-quiz-next');
+          if (btnNextQ) {
+            btnNextQ.onclick = () => {
+              soundEngine.playClick();
+              if (currentQuestionIdx + 1 < BOSS_QUIZ_QUESTIONS.length) {
+                currentQuestionIdx++;
+                selectedOption = null;
+                syncUI();
+              } else {
+                if (quizScore >= 70) {
+                  soundEngine.playVictory();
+                  gameMode = 'VICTORY';
+                } else {
+                  soundEngine.playGameOver();
+                  gameMode = 'GAME_OVER';
+                }
+                syncUI();
+              }
+            };
+          }
+        }
+
+        /* ==========================================================================
+           8. GAME FLOW CONTROLLERS
+           ========================================================================== */
+        function startNewRun() {
+          soundEngine.initOnUserGesture();
+          soundEngine.playClick();
+          soundEngine.startBGM('runner', true);
+          isPaused = false;
+          score = 0;
+          lives = 5;
+          currentCheckpointIndex = 0;
+          completedCheckpoints = [];
+          bossHp = 100;
+          sim.checkpointIndexSpawned = -1;
+          gameMode = 'RUNNING';
+          spawnCactusForCurrentCheckpoint();
+          syncUI();
+        }
+
+        function openCheckpointAtIndex(idx) {
+          isPaused = false;
+          currentCheckpointIndex = idx;
+          if (!completedCheckpoints.includes(idx)) {
+            completedCheckpoints.push(idx);
+          }
+          gameMode = 'CHECKPOINT_MODAL';
+          syncUI();
+        }
+
+        function advanceFromCheckpointModal() {
+          soundEngine.playClick();
+          const nextIdx = currentCheckpointIndex + 1;
+          if (nextIdx < CHECKPOINTS.length) {
+            currentCheckpointIndex = nextIdx;
+            isPaused = false;
+            // Keep 'runner' BGM playing seamlessly from current note!
+            soundEngine.startBGM('runner', false);
+            gameMode = 'RUNNING';
+            spawnCactusForCurrentCheckpoint();
+            syncUI();
+          } else {
+            startBossBattle();
+          }
+        }
+
+        function startBossBattle() {
+          soundEngine.playBossEntry();
+          soundEngine.startBGM('boss', true);
+          bossHp = 100;
+          lives = 5;
+          currentQuestionIdx = 0;
+          selectedOption = null;
+          quizScore = 0;
+          quizHistory = [];
+          showFullBreakdown = false;
+          gameMode = 'BOSS_QUIZ';
+          syncUI();
+        }
+
+        function togglePauseMenu() {
+          if (gameMode !== 'RUNNING') return;
+          isPaused = !isPaused;
+          soundEngine.playPauseToggle(isPaused);
+          syncUI();
+        }
+
+        function exitToMainMenu() {
+          soundEngine.playClick();
+          isPaused = false;
+          gameMode = 'START_SCREEN';
+          soundEngine.startBGM('welcome', true);
+          syncUI();
+        }
+
+        /* ==========================================================================
+           9. 2D PIXEL-ART CANVAS ENGINE (REX, BIRDS, CACTI, BOSS & B/W FIREWORKS)
+           ========================================================================== */
+        const DINO_SPRITE_BASE = [
+          '..........XXXXXXXXX.',
+          '.........XXXXXXXXXXX',
+          '.........XX.XXXXXXXX',
+          '.........XXXXXXXXXXX',
+          '.........XXXXXX.....',
+          '.........XXXXXXXXX..',
+          '........XXXXXX......',
+          'X......XXXXXXX......',
+          'XX....XXXXXXXXXX....',
+          'XXX..XXXXXXXXX.X....',
+          'XXXXXXXXXXXXXX......',
+          'XXXXXXXXXXXXXX......',
+          '.XXXXXXXXXXXX.......',
+          '..XXXXXXXXXX........',
+          '...XXXXXXXX.........',
+          '....XXXXXX..........'
+        ];
+
+        const DINO_SPRITE_SMILING = [
+          '..........XXXXXXXXX.',
+          '.........XXXXXXXXXXX',
+          '.........XX.XXXXXXXX',
+          '.........XXXXXXXXXXX',
+          '.........XXXXXX...X.',
+          '.........XXXXXXXXXX.',
+          '........XXXXXX......',
+          'X......XXXXXXX...XX.',
+          'XX....XXXXXXXXXXXX..',
+          'XXX..XXXXXXXXX......',
+          'XXXXXXXXXXXXXX......',
+          'XXXXXXXXXXXXXX......',
+          '.XXXXXXXXXXXX.......',
+          '..XXXXXXXXXX........',
+          '...XXXXXXXX.........',
+          '....XXXXXX..........'
+        ];
+
+        const DINO_LEGS_IDLE = [
+          '....XX..XX..........',
+          '....XX..XX..........',
+          '....XX..XX..........',
+          '....XXX.XXX.........'
+        ];
+
+        const DINO_LEGS_RUN_1 = [
+          '....XX..XX..........',
+          '....XX...XX.........',
+          '....XX..............',
+          '....XXX.............'
+        ];
+
+        const DINO_LEGS_RUN_2 = [
+          '....XX..XX..........',
+          '.....XX.XX..........',
+          '........XX..........',
+          '........XXX.........'
+        ];
+
+        const BIRD_WING_UP = [
+          '......XX.............',
+          '......XXX............',
+          '.....XXXXX...........',
+          '...XXX.XXXXX.........',
+          '..XXXX.XXXXXX........',
+          '.XXXXXXXXXXXXX.......',
+          'XXXXXXXXXXXXXXX......',
+          '......XXXXXXXXXXXXXXX',
+          '.......XXXXXXXXXXXX..',
+          '........XXXXXXXXXXXX.',
+          '.........XXXXXXXX....'
+        ];
+
+        const BIRD_WING_DOWN = [
+          '.....................',
+          '.....................',
+          '...XXX...............',
+          '..XXXX...............',
+          '.XXXXXXXXXXXX........',
+          'XXXXXXXXXXXXXXX......',
+          '......XXXXXXXXXXXXXXX',
+          '.......XXXXXXXXXXXX..',
+          '.......XXXXXXXXXXXXXX',
+          '.......XXXXXX........',
+          '........XXXX.........',
+          '........XXX..........',
+          '.........X...........'
+        ];
+
+        const BOSS_SPRITE = [
+          '.XXXXXXXXXXX..........',
+          'XXXXXXXXXXXXX.........',
+          'XXXXXXXX..XXX.........',
+          'XXXXXXXXXXXXX.........',
+          '....XXXXXXXXX.........',
+          '..XXXXXXXXXXX.........',
+          '......XXXXXXXX........',
+          '......XXXXXXXXX......X',
+          '....XXXXXXXXXXXX....XX',
+          '....X.XXXXXXXXXXX..XXX',
+          '......XXXXXXXXXXXXXXXX',
+          '......XXXXXXXXXXXXXXXX',
+          '.......XXXXXXXXXXXXXX.',
+          '........XXXXXXXXXXXX..',
+          '.........XXXXXXXXXX...',
+          '..........XXXXXXXX....',
+          '..........XX....XX....',
+          '..........XX....XX....',
+          '.........XXX...XXX....'
+        ];
+
+        const sim = {
+          dinoX: 110,
+          dinoY: 0,
+          dinoVy: 0,
+          isJumping: false,
+          legFrame: 0,
+          legTimer: 0,
+          scoreTimer: 0,
+          cactusX: 780,
+          cactusPassed: false,
+          postJumpTimer: 0,
+          checkpointIndexSpawned: -1,
+          clouds: [
+            { x: 220, y: 68, speed: 28, scale: 1 },
+            { x: 540, y: 48, speed: 22, scale: 1.15 },
+            { x: 890, y: 82, speed: 32, scale: 0.9 },
+            { x: 1180, y: 58, speed: 25, scale: 1.05 }
+          ],
+          birds: [
+            { x: 640, y: 120, speed: 190, wingFrame: 0, wingTimer: 0 },
+            { x: 1080, y: 85, speed: 225, wingFrame: 1, wingTimer: 0.08 },
+            { x: 1490, y: 145, speed: 205, wingFrame: 0, wingTimer: 0.04 }
+          ],
+          pebbles: [],
+          particles: [],
+          fireworkRockets: [],
+          fireworkSpawnTimer: 0,
+          floatingTexts: [],
+          bossBobTimer: 0,
+          laserProgress: 0,
+          shockwaveProgress: 0,
+          shakeTimer: 0,
+          playerHitFlash: 0,
+          bossHitFlash: 0
+        };
+
+        for (let i = 0; i < 45; i++) {
+          sim.pebbles.push({
+            x: i * 42 + Math.random() * 25,
+            yOffset: 6 + Math.floor(Math.random() * 14),
+            width: Math.random() > 0.35 ? 4 : 8,
+            height: 2,
+            isBump: i % 9 === 0
+          });
+        }
+
+        function spawnCactusForCurrentCheckpoint() {
+          const w = canvas.width || window.innerWidth || 1100;
+          sim.cactusX = Math.max(680, Math.min(w * 0.72, 920));
+          sim.cactusPassed = false;
+          sim.postJumpTimer = 0;
+          sim.checkpointIndexSpawned = currentCheckpointIndex;
+        }
+
+        function triggerJump() {
+          if (isPaused) return;
+          if (gameMode === 'START_SCREEN') {
+            if (!sim.isJumping && sim.dinoY <= 1) {
+              sim.isJumping = true;
+              sim.dinoVy = 460;
+              soundEngine.initOnUserGesture();
+              soundEngine.playGreeting();
+            }
+            return;
+          }
+          if (gameMode !== 'RUNNING') return;
+          if (!sim.isJumping && sim.dinoY <= 1) {
+            sim.isJumping = true;
+            sim.dinoVy = 610;
+            soundEngine.playJump();
+            for (let i = 0; i < 6; i++) {
+              sim.particles.push({
+                x: sim.dinoX + 18 + (Math.random() - 0.5) * 16,
+                y: 0,
+                vx: -80 - Math.random() * 60,
+                vy: 20 + Math.random() * 50,
+                size: 4,
+                life: 0,
+                maxLife: 0.35,
+                color: '#535353'
+              });
+            }
+          }
+        }
+
+        function triggerBossVisualEffect(effectType) {
+          const w = canvas.width || 1100;
+          const h = canvas.height || 650;
+          const groundY = Math.floor(h * 0.86);
+          const bossX = Math.max(w - 280, sim.dinoX + 360);
+
+          if (effectType === 'player_attack') {
+            sim.laserProgress = 0.01;
+            sim.shakeTimer = 0.38;
+            sim.bossHitFlash = 0.55;
+            sim.dinoVy = 420;
+            sim.isJumping = true;
+            sim.floatingTexts.push({
+              x: bossX - 20,
+              y: groundY - 140,
+              text: '💥 -10 HP DIRECT HIT!',
+              life: 0,
+              maxLife: 1.35
+            });
+            for (let i = 0; i < 18; i++) {
+              const angle = (Math.PI * 2 * i) / 18;
+              const speed = 70 + Math.random() * 110;
+              sim.particles.push({
+                x: bossX + 35,
+                y: 75,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: 5,
+                life: 0,
+                maxLife: 0.55,
+                color: i % 2 === 0 ? '#202124' : '#ffffff',
+                hasOutline: true
+              });
+            }
+          } else if (effectType === 'boss_attack') {
+            sim.shockwaveProgress = 0.01;
+            sim.shakeTimer = 0.48;
+            sim.playerHitFlash = 0.6;
+            sim.floatingTexts.push({
+              x: sim.dinoX - 10,
+              y: groundY - 115,
+              text: '⚡ -1 LIFE! BOSS STOMP!',
+              life: 0,
+              maxLife: 1.35
+            });
+            for (let i = 0; i < 14; i++) {
+              const angle = (Math.PI * 2 * i) / 14;
+              const speed = 60 + Math.random() * 90;
+              sim.particles.push({
+                x: sim.dinoX + 25,
+                y: 45,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: 4,
+                life: 0,
+                maxLife: 0.5,
+                color: '#202124'
+              });
+            }
+          }
+        }
+
+        function spawnBlackAndWhiteFirework(x, groundY, burstY) {
+          const offsetAboveGround = groundY - burstY;
+          const ringCount = 28;
+          const palette = ['#202124', '#ffffff', '#535353', '#9e9e9e'];
+          soundEngine.playFireworkBurst();
+          for (let i = 0; i < ringCount; i++) {
+            const angle = (Math.PI * 2 * i) / ringCount;
+            const speed = (i % 2 === 0 ? 130 : 75) + Math.random() * 35;
+            sim.particles.push({
+              x,
+              y: offsetAboveGround,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              size: i % 3 === 0 ? 6 : 4,
+              life: 0,
+              maxLife: 0.95 + Math.random() * 0.35,
+              color: palette[i % palette.length],
+              hasOutline: true
+            });
+          }
+        }
+
+        function drawPixelSprite(ctx, matrix, x, y, pixelSize, color) {
+          ctx.fillStyle = color;
+          for (let r = 0; r < matrix.length; r++) {
+            const line = matrix[r];
+            for (let c = 0; c < line.length; c++) {
+              if (line[c] === 'X') {
+                ctx.fillRect(Math.floor(x + c * pixelSize), Math.floor(y + r * pixelSize), pixelSize, pixelSize);
+              }
+            }
+          }
+        }
+
+        function drawPixelCloud(ctx, x, y, scale) {
+          const p = Math.max(2, Math.round(3 * scale));
+          ctx.fillStyle = '#e4e4e4';
+          ctx.fillRect(Math.floor(x + 4 * p), Math.floor(y), 10 * p, 4 * p);
+          ctx.fillRect(Math.floor(x + 2 * p), Math.floor(y + 2 * p), 16 * p, 4 * p);
+          ctx.fillRect(Math.floor(x), Math.floor(y + 4 * p), 20 * p, 3 * p);
+          ctx.fillStyle = '#cfcfcf';
+          ctx.fillRect(Math.floor(x), Math.floor(y + 7 * p), 20 * p, p);
+          ctx.fillRect(Math.floor(x + 4 * p), Math.floor(y - p), 10 * p, p);
+        }
+
+        function drawSingleCactus(ctx, x, groundY, heightPx, color) {
+          const p = 3;
+          const trunkW = 3 * p;
+          const trunkX = Math.floor(x + 4 * p);
+          const topY = Math.floor(groundY - heightPx);
+          ctx.fillStyle = color;
+          ctx.fillRect(trunkX, topY + p, trunkW, heightPx - p);
+          ctx.fillRect(trunkX + p, topY, trunkW - 2 * p, p);
+          const leftArmY = topY + Math.floor(heightPx * 0.28);
+          ctx.fillRect(Math.floor(x), leftArmY, 2 * p, 5 * p);
+          ctx.fillRect(Math.floor(x + p), leftArmY - p, p, p);
+          ctx.fillRect(Math.floor(x), leftArmY + 5 * p, 4 * p, 2 * p);
+          const rightArmY = topY + Math.floor(heightPx * 0.22);
+          ctx.fillRect(trunkX + trunkW + 2 * p, rightArmY, 2 * p, 6 * p);
+          ctx.fillRect(trunkX + trunkW + 2 * p, rightArmY - p, p, p);
+          ctx.fillRect(trunkX + trunkW, rightArmY + 5 * p, 4 * p, 2 * p);
+        }
+
+        function drawCactusCluster(ctx, x, groundY, variant, code, title) {
+          const color = '#535353';
+          if (variant === 'single') {
+            drawSingleCactus(ctx, x, groundY, 54, color);
+          } else if (variant === 'double') {
+            drawSingleCactus(ctx, x, groundY, 52, color);
+            drawSingleCactus(ctx, x + 36, groundY, 62, color);
+          } else if (variant === 'triple') {
+            drawSingleCactus(ctx, x, groundY, 50, color);
+            drawSingleCactus(ctx, x + 34, groundY, 62, color);
+            drawSingleCactus(ctx, x + 68, groundY, 54, color);
+          } else {
+            drawSingleCactus(ctx, x, groundY, 60, color);
+            drawSingleCactus(ctx, x + 40, groundY, 64, color);
+          }
+          const flagX = Math.floor(x - 10);
+          const flagY = Math.floor(groundY - 96);
+          ctx.fillStyle = '#202124';
+          ctx.fillRect(flagX, flagY, 92, 22);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(flagX + 2, flagY + 2, 88, 18);
+          ctx.fillStyle = '#202124';
+          ctx.font = 'bold 9px "Press Start 2P", monospace';
+          ctx.fillText(code, flagX + 10, flagY + 15);
+          ctx.fillStyle = '#535353';
+          ctx.font = '600 10px "JetBrains Mono", monospace';
+          ctx.fillText(title.toUpperCase(), flagX, flagY - 6);
+        }
+
+        let lastTime = performance.now();
+        function animate(now) {
+          const rawDt = (now - lastTime) / 1000;
+          lastTime = now;
+          const dt = Math.min(rawDt, 0.05);
+
+          const parent = canvas.parentElement;
+          if (parent) {
+            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+              canvas.width = parent.clientWidth;
+              canvas.height = parent.clientHeight;
+            }
+          }
+
+          const ctx = canvas.getContext('2d');
+          const width = canvas.width;
+          const height = canvas.height;
+          const isBossScene = gameMode === 'BOSS_QUIZ' || gameMode === 'VICTORY' || gameMode === 'GAME_OVER';
+          const groundY = Math.floor(height * (isBossScene ? 0.86 : 0.76));
+          const runSpeed = reducedMotion ? 240 : 340;
+
+          if (gameMode === 'RUNNING' && !isPaused) {
+            sim.scoreTimer += dt;
+            if (sim.scoreTimer >= 0.12) {
+              sim.scoreTimer = 0;
+              score += 1;
+              elHudScore.textContent = formatScore(score);
+              if (score > highScore) {
+                highScore = score;
+                elHudHiScore.textContent = formatScore(highScore);
+              }
+            }
+
+            sim.legTimer += dt;
+            if (sim.legTimer >= 0.085) {
+              sim.legTimer = 0;
+              sim.legFrame = (sim.legFrame + 1) % 2;
+            }
+
+            sim.birds.forEach((b) => {
+              b.x -= (reducedMotion ? b.speed * 0.7 : b.speed) * dt;
+              b.wingTimer += dt;
+              if (b.wingTimer >= 0.16) {
+                b.wingTimer = 0;
+                b.wingFrame = (b.wingFrame + 1) % 2;
+              }
+              if (b.x < -90) {
+                b.x = width + 180 + Math.random() * 320;
+                b.y = Math.max(55, groundY - 135 - Math.floor(Math.random() * 95));
+              }
+            });
+
+            if (currentCheckpointIndex < CHECKPOINTS.length) {
+              sim.cactusX -= runSpeed * dt;
+              const dist = sim.cactusX - (sim.dinoX + 44);
+              if (dist <= 95 && dist > 10 && !sim.isJumping && !sim.cactusPassed) {
+                triggerJump();
+              }
+              const cp = CHECKPOINTS[currentCheckpointIndex];
+              const cWidth = cp.cactusVariant === 'triple' ? 96 : cp.cactusVariant === 'double' ? 68 : 38;
+              if (!sim.cactusPassed && sim.dinoX > sim.cactusX + cWidth * 0.55) {
+                sim.cactusPassed = true;
+                soundEngine.playCheckpoint();
+                score += 50;
+                sim.floatingTexts.push({
+                  x: sim.dinoX,
+                  y: groundY - 110,
+                  text: `${cp.code} UNLOCKED! +50`,
+                  life: 0,
+                  maxLife: 1.0
+                });
+              }
+              if (sim.cactusPassed && !sim.isJumping && sim.dinoY <= 1) {
+                sim.postJumpTimer += dt;
+                if (sim.postJumpTimer >= 0.16) {
+                  sim.postJumpTimer = 0;
+                  openCheckpointAtIndex(currentCheckpointIndex);
+                }
+              }
+            }
+          }
+
+          if (!isPaused && (sim.isJumping || sim.dinoY > 0)) {
+            sim.dinoY += sim.dinoVy * dt;
+            sim.dinoVy -= 1550 * dt;
+            if (sim.dinoY <= 0) {
+              sim.dinoY = 0;
+              sim.dinoVy = 0;
+              sim.isJumping = false;
+            }
+          }
+
+          if (gameMode === 'VICTORY') {
+            if (!sim.isJumping && sim.dinoY <= 1 && Math.random() < 0.05) {
+              sim.isJumping = true;
+              sim.dinoVy = 380;
+            }
+            sim.fireworkSpawnTimer += dt;
+            if (sim.fireworkSpawnTimer >= 0.55) {
+              sim.fireworkSpawnTimer = 0;
+              const rx = 140 + Math.random() * (width - 280);
+              const targetY = 75 + Math.random() * Math.max(90, groundY * 0.42);
+              sim.fireworkRockets.push({
+                x: rx,
+                y: groundY - 10,
+                targetY,
+                vy: 460 + Math.random() * 140
+              });
+            }
+          }
+
+          for (let i = sim.fireworkRockets.length - 1; i >= 0; i--) {
+            const rk = sim.fireworkRockets[i];
+            rk.y -= rk.vy * dt;
+            if (rk.y <= rk.targetY) {
+              spawnBlackAndWhiteFirework(rk.x, groundY, rk.targetY);
+              sim.fireworkRockets.splice(i, 1);
+            }
+          }
+
+          if (!reducedMotion && !isPaused) {
+            sim.clouds.forEach((c) => {
+              c.x -= (gameMode === 'RUNNING' ? c.speed : c.speed * 0.35) * dt;
+              if (c.x < -120) c.x = width + 60;
+            });
+          }
+
+          if (gameMode === 'RUNNING' && !isPaused && !reducedMotion) {
+            sim.pebbles.forEach((p) => {
+              p.x -= runSpeed * dt;
+              if (p.x < -20) p.x = width + Math.random() * 60;
+            });
+          }
+
+          sim.bossBobTimer += dt * 3;
+          if (sim.laserProgress > 0) {
+            sim.laserProgress += dt * 2.5;
+            if (sim.laserProgress >= 1) sim.laserProgress = 0;
+          }
+          if (sim.shockwaveProgress > 0) {
+            sim.shockwaveProgress += dt * 2.2;
+            if (sim.shockwaveProgress >= 1) sim.shockwaveProgress = 0;
+          }
+          if (sim.shakeTimer > 0) sim.shakeTimer = Math.max(0, sim.shakeTimer - dt);
+          if (sim.playerHitFlash > 0) sim.playerHitFlash = Math.max(0, sim.playerHitFlash - dt);
+          if (sim.bossHitFlash > 0) sim.bossHitFlash = Math.max(0, sim.bossHitFlash - dt);
+
+          ctx.save();
+          if (sim.shakeTimer > 0 && !reducedMotion) {
+            const mag = sim.shakeTimer * 12;
+            ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+          }
+
+          ctx.fillStyle = '#f7f7f7';
+          ctx.fillRect(0, 0, width, height);
+
+          sim.clouds.forEach((c) => drawPixelCloud(ctx, c.x, c.y, c.scale));
+
+          if (gameMode === 'RUNNING' || gameMode === 'CHECKPOINT_MODAL') {
+            sim.birds.forEach((b) => {
+              drawPixelSprite(ctx, b.wingFrame === 0 ? BIRD_WING_UP : BIRD_WING_DOWN, b.x, b.y, 3, '#535353');
+            });
+          }
+
+          sim.fireworkRockets.forEach((rk) => {
+            ctx.fillStyle = '#202124';
+            ctx.fillRect(Math.floor(rk.x - 2), Math.floor(rk.y), 4, 10);
+            ctx.fillStyle = '#757575';
+            ctx.fillRect(Math.floor(rk.x - 1), Math.floor(rk.y + 10), 2, 8);
+          });
+
+          ctx.fillStyle = '#535353';
+          ctx.fillRect(0, groundY, width, 2);
+
+          sim.pebbles.forEach((p) => {
+            if (p.isBump) {
+              ctx.fillStyle = '#f7f7f7';
+              ctx.fillRect(Math.floor(p.x), groundY, 18, 2);
+              ctx.fillStyle = '#535353';
+              ctx.fillRect(Math.floor(p.x + 2), groundY - 2, 14, 2);
+              ctx.fillRect(Math.floor(p.x + 5), groundY - 4, 8, 2);
+            }
+            ctx.fillStyle = '#757575';
+            ctx.fillRect(Math.floor(p.x), groundY + p.yOffset, p.width, p.height);
+          });
+
+          if ((gameMode === 'RUNNING' || gameMode === 'CHECKPOINT_MODAL') && currentCheckpointIndex < CHECKPOINTS.length) {
+            const cp = CHECKPOINTS[currentCheckpointIndex];
+            drawCactusCluster(ctx, sim.cactusX, groundY, cp.cactusVariant, cp.code, cp.title);
+          }
+
+          const dinoPixelSize = 3;
+          const dinoDrawX = sim.dinoX;
+          const dinoDrawY = groundY - 20 * dinoPixelSize - sim.dinoY;
+          const isSmiling = gameMode === 'START_SCREEN' || gameMode === 'VICTORY';
+          const baseMat = isSmiling ? DINO_SPRITE_SMILING : DINO_SPRITE_BASE;
+          const legsMat =
+            gameMode === 'RUNNING' && !sim.isJumping && !isPaused
+              ? sim.legFrame === 0
+                ? DINO_LEGS_RUN_1
+                : DINO_LEGS_RUN_2
+              : DINO_LEGS_IDLE;
+
+          const dinoColor =
+            sim.playerHitFlash > 0 && Math.floor(sim.playerHitFlash * 20) % 2 === 0 ? '#9e9e9e' : '#202124';
+          drawPixelSprite(ctx, baseMat.concat(legsMat), dinoDrawX, dinoDrawY, dinoPixelSize, dinoColor);
+
+          if (gameMode === 'START_SCREEN') {
+            const bx = dinoDrawX - 10;
+            const by = dinoDrawY - 54;
+            ctx.fillStyle = '#202124';
+            ctx.fillRect(bx, by, 275, 36);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(bx + 2, by + 2, 271, 32);
+            ctx.fillStyle = '#202124';
+            ctx.fillRect(dinoDrawX + 26, by + 36, 8, 6);
+            ctx.font = 'bold 9px "Press Start 2P", monospace';
+            ctx.fillText('HI! I AM REX ^_^', bx + 10, by + 15);
+            ctx.font = '600 10px "JetBrains Mono", monospace';
+            ctx.fillText('Welcome to TeamUp Backend! (Click me)', bx + 10, by + 29);
+          } else if (gameMode === 'RUNNING') {
+            ctx.fillStyle = '#535353';
+            ctx.font = 'bold 9px "Press Start 2P", monospace';
+            ctx.fillText(isPaused ? 'PAUSED' : sim.isJumping ? 'JUMP!' : 'TEAMUP.EXE', dinoDrawX - 4, dinoDrawY - 10);
+          }
+
+          if (isBossScene) {
+            const pBarW = 110;
+            const pBarX = dinoDrawX - 10;
+            const pBarY = dinoDrawY - 34;
+            ctx.fillStyle = '#202124';
+            ctx.fillRect(pBarX, pBarY, pBarW, 14);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(pBarX + 2, pBarY + 2, pBarW - 4, 10);
+            ctx.fillStyle = '#202124';
+            ctx.fillRect(pBarX + 2, pBarY + 2, Math.max(0, Math.floor(((pBarW - 4) * lives) / 5)), 10);
+            ctx.font = 'bold 8px "Press Start 2P", monospace';
+            ctx.fillText(`YOU ♥x${lives}`, pBarX + 2, pBarY - 5);
+
+            const bossPixelSize = 6;
+            const bossBob = reducedMotion || gameMode === 'VICTORY' ? 0 : Math.sin(sim.bossBobTimer) * 5;
+            const bossX = Math.max(width - 280, sim.dinoX + 360);
+            const bossY =
+              gameMode === 'VICTORY'
+                ? groundY - 14 * bossPixelSize
+                : groundY - 19 * bossPixelSize + bossBob;
+            const bColor =
+              sim.bossHitFlash > 0 && Math.floor(sim.bossHitFlash * 20) % 2 === 0
+                ? '#9e9e9e'
+                : bossHp <= 0 || gameMode === 'VICTORY'
+                ? '#a8a8a8'
+                : '#202124';
+
+            drawPixelSprite(ctx, BOSS_SPRITE, bossX, bossY, bossPixelSize, bColor);
+
+            const barW = 148;
+            const barX = bossX - 6;
+            const barY = bossY - 36;
+            ctx.fillStyle = '#202124';
+            ctx.fillRect(barX, barY, barW, 14);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(barX + 2, barY + 2, barW - 4, 10);
+            ctx.fillStyle = '#535353';
+            ctx.fillRect(barX + 2, barY + 2, Math.max(0, Math.floor(((barW - 4) * bossHp) / 100)), 10);
+            ctx.fillStyle = '#202124';
+            ctx.font = 'bold 8px "Press Start 2P", monospace';
+            ctx.fillText(gameMode === 'VICTORY' ? 'BOSS DEFEATED!' : `BOSS HP ${bossHp}%`, barX + 4, barY - 5);
+
+            if (sim.laserProgress > 0) {
+              const sx = dinoDrawX + 55;
+              const sy = dinoDrawY + 20;
+              const ex = sx + (bossX - sx) * Math.min(1, sim.laserProgress * 1.4);
+              ctx.fillStyle = '#202124';
+              ctx.fillRect(sx, sy, ex - sx, 8);
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(sx, sy + 2, ex - sx, 4);
+              ctx.fillStyle = '#202124';
+              ctx.fillRect(ex - 14, sy - 6, 20, 20);
+            }
+
+            if (sim.shockwaveProgress > 0) {
+              const wx = bossX - (bossX - dinoDrawX) * sim.shockwaveProgress;
+              ctx.fillStyle = '#202124';
+              for (let i = 0; i < 5; i++) {
+                const h = 18 + i * 9;
+                ctx.fillRect(wx + i * 11, groundY - h, 7, h);
+              }
+            }
+          }
+
+          for (let i = sim.particles.length - 1; i >= 0; i--) {
+            const pt = sim.particles[i];
+            pt.life += dt;
+            if (pt.life >= pt.maxLife) {
+              sim.particles.splice(i, 1);
+              continue;
+            }
+            pt.x += pt.vx * dt;
+            pt.y += pt.vy * dt;
+            pt.vy -= 90 * dt;
+            const px = Math.floor(pt.x);
+            const py = Math.floor(groundY - pt.y);
+            if (pt.hasOutline) {
+              ctx.fillStyle = '#202124';
+              ctx.fillRect(px - 1, py - 1, pt.size + 2, pt.size + 2);
+            }
+            ctx.fillStyle = pt.color;
+            ctx.fillRect(px, py, pt.size, pt.size);
+          }
+
+          for (let i = sim.floatingTexts.length - 1; i >= 0; i--) {
+            const ft = sim.floatingTexts[i];
+            ft.life += dt;
+            if (ft.life >= ft.maxLife) {
+              sim.floatingTexts.splice(i, 1);
+              continue;
+            }
+            ft.y -= 32 * dt;
+            const tx = Math.floor(ft.x);
+            const ty = Math.floor(ft.y);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(tx - 4, ty - 14, ft.text.length * 9 + 8, 20);
+            ctx.strokeStyle = '#202124';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(tx - 4, ty - 14, ft.text.length * 9 + 8, 20);
+            ctx.fillStyle = '#202124';
+            ctx.font = 'bold 10px "Press Start 2P", monospace';
+            ctx.fillText(ft.text, tx, ty);
+          }
+
+          ctx.restore();
+          requestAnimationFrame(animate);
+        }
+
+        /* ==========================================================================
+           10. EVENT LISTENERS & INITIALIZATION
+           ========================================================================== */
+        canvas.onclick = () => triggerJump();
+        document.getElementById('btn-start-game').onclick = () => startNewRun();
+        document.getElementById('btn-brand-home').onclick = () => exitToMainMenu();
+        btnHudPause.onclick = () => togglePauseMenu();
+        btnCanvasPause.onclick = (e) => {
+          e.stopPropagation();
+          togglePauseMenu();
+        };
+        btnHudOpenSlide.onclick = () => {
+          soundEngine.playClick();
+          openCheckpointAtIndex(currentCheckpointIndex);
+        };
+
+        btnSfxToggle.onclick = () => {
+          soundEngine.initOnUserGesture();
+          soundEngine.setMuted(!soundEngine.sfxMuted);
+          syncUI();
+        };
+        btnBgmToggle.onclick = () => {
+          soundEngine.initOnUserGesture();
+          soundEngine.setBgmEnabled(!soundEngine.bgmEnabled);
+          syncUI();
+        };
+        btnWelcomeSound.onclick = () => {
+          soundEngine.initOnUserGesture();
+          soundEngine.setMuted(!soundEngine.sfxMuted);
+          syncUI();
+        };
+        btnWelcomeMusic.onclick = () => {
+          soundEngine.initOnUserGesture();
+          soundEngine.playGreeting();
+          soundEngine.startBGM('welcome', true);
+          syncUI();
+        };
+        document.getElementById('welcome-rex-box').onclick = () => {
+          soundEngine.initOnUserGesture();
+          soundEngine.playGreeting();
+          soundEngine.startBGM('welcome', false);
+          triggerJump();
+        };
+        inputVolume.oninput = (e) => {
+          soundEngine.setVolume(parseFloat(e.target.value));
+        };
+        btnMotionToggle.onclick = () => {
+          reducedMotion = !reducedMotion;
+          syncUI();
+        };
+        btnToggleInstructions.onclick = () => {
+          soundEngine.initOnUserGesture();
+          soundEngine.playClick();
+          welcomeInstructions.classList.toggle('hidden');
+          btnToggleInstructions.textContent = welcomeInstructions.classList.contains('hidden')
+            ? '? INSTRUCTIONS'
+            : 'HIDE INSTRUCTIONS';
+        };
+        btnBossStrip.onclick = () => {
+          if (completedCheckpoints.length >= CHECKPOINTS.length) {
+            startBossBattle();
+          }
+        };
+
+        // Pause Modal Buttons
+        document.getElementById('btn-pause-continue').onclick = () => togglePauseMenu();
+        btnPauseOpenSlide.onclick = () => {
+          soundEngine.playClick();
+          openCheckpointAtIndex(currentCheckpointIndex);
+        };
+        document.getElementById('btn-pause-restart').onclick = () => startNewRun();
+        document.getElementById('btn-pause-exit').onclick = () => exitToMainMenu();
+
+        // Checkpoint Modal Buttons
+        btnCpContinue.onclick = () => advanceFromCheckpointModal();
+        btnCpNext.onclick = () => advanceFromCheckpointModal();
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+          if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+            if (gameMode === 'RUNNING' && !isPaused) {
+              e.preventDefault();
+              triggerJump();
+            }
+          } else if ((e.code === 'KeyP' || e.code === 'Escape') && gameMode === 'RUNNING') {
+            e.preventDefault();
+            togglePauseMenu();
+          }
+        });
+
+        // Start Welcome Music & Main Loop
+        soundEngine.startBGM('welcome', true);
+        syncUI();
+        requestAnimationFrame(animate);
+      })();
+    </script>
+  </body>
+</html>

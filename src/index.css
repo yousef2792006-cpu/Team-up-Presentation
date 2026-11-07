@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --dino-bg: #f7f7f7;
+    --dino-surface: #ffffff;
+    --dino-ink: #535353;
+    --dino-dark: #202124;
+    --dino-muted: #757575;
+    --dino-border: #535353;
+    --teamup-lime: #b5e61d;
+  }
+
+  body {
+    background-color: var(--dino-bg);
+    color: var(--dino-dark);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.font-pixel {
+  font-family: 'Press Start 2P', monospace;
+  letter-spacing: 0.04em;
+}
+
+.font-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Crisp retro pixel box shadows without gradients or blur */
+.retro-box {
+  background-color: #ffffff;
+  border: 3px solid #202124;
+  box-shadow: 6px 6px 0px #535353;
+}
+
+.retro-box-sm {
+  background-color: #ffffff;
+  border: 2px solid #202124;
+  box-shadow: 4px 4px 0px #535353;
+}
+
+.retro-btn {
+  background-color: #202124;
+  color: #f7f7f7;
+  border: 2px solid #202124;
+  box-shadow: 4px 4px 0px #757575;
+  transition: transform 100ms ease, background-color 100ms ease, box-shadow 100ms ease;
+}
+
+.retro-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px #535353;
+}
+
+.retro-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #535353;
+}
+
+.retro-btn-secondary {
+  background-color: #f7f7f7;
+  color: #202124;
+  border: 2px solid #202124;
+  box-shadow: 4px 4px 0px #535353;
+  transition: transform 100ms ease, background-color 100ms ease, box-shadow 100ms ease;
+}
+
+.retro-btn-secondary:hover:not(:disabled) {
+  background-color: #ebebeb;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px #202124;
+}
+
+.retro-btn-secondary:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #202124;
+}
+
+/* Custom retro scrollbar for educational panels */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-left: 2px solid #535353;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #535353;
+  border: 2px solid #f0f0f0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #202124;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "TeamUp – The Backend Runner",
+  "description": "An interactive 2D Chrome Dinosaur-inspired endless-runner game presentation exploring the TeamUp University Platform Backend Architecture, Chen ERD, .NET 10 APIs, Concurrency, and Gamification Engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
